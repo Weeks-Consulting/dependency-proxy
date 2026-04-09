@@ -34,3 +34,4 @@ code_quality:
       command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
   before_script:
     - echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login $CI_DEPENDENCY_PROXY_SERVER -u $CI_DEPENDENCY_PROXY_USER --password-stdin
+    - docker pull "$CODE_QUALITY_IMAGE"
