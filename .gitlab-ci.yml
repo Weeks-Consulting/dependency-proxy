@@ -1,9 +1,8 @@
 include:
   - template: Auto-DevOps.gitlab-ci.yml
 
-variables:
-  DOCKER_HOST: tcp://docker:2375
-  DOCKER_SOCKET_PATH: /run/user/1000/docker.sock
+# variables:
+  # DOCKER_HOST: tcp://docker:2375
   # CI_DEBUG_SERVICES: true
   # CI_DEBUG_TRACE: true
 
@@ -19,11 +18,11 @@ build:
       command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
   # Hot patching the build script since it doesn't have a native way to set docker host for the build container.
   before_script:
-    - sed -i 's~--builder "$builder"~--builder "$builder" --docker-host=unix://${DOCKER_SOCKET_PATH}~' /build/build.sh
+    - sed -i 's~--builder "$builder"~--builder "$builder" --docker-host=unix:///run/user/1000/docker.sock~' /build/build.sh
 
 code_quality:
   variables:
-      # DOCKER_SOCKET_PATH: ${DOCKER_SOCKET_PATH}
+      DOCKER_SOCKET_PATH: /run/user/1000/docker.sock
       CODECLIMATE_PREFIX: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}
       CODECLIMATE_REGISTRY: ${CI_DEPENDENCY_PROXY_SERVER}
       CODECLIMATE_REGISTRY_USERNAME: ${CI_DEPENDENCY_PROXY_USER}
