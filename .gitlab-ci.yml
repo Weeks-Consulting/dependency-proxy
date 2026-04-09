@@ -27,11 +27,12 @@ code_quality:
       CODECLIMATE_REGISTRY: ${CI_DEPENDENCY_PROXY_SERVER}
       CODECLIMATE_REGISTRY_USERNAME: ${CI_DEPENDENCY_PROXY_USER}
       CODECLIMATE_REGISTRY_PASSWORD: ${CI_DEPENDENCY_PROXY_PASSWORD}
+      DOCKERD_ROOTLESS_ROOTLESSKIT_FLAGS: --net=slirp4netns
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29
   services:
     - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29-dind-rootless
       alias: docker
       command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
-  before_script:
-    - echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login $CI_DEPENDENCY_PROXY_SERVER -u $CI_DEPENDENCY_PROXY_USER --password-stdin
-    - docker pull "$CODE_QUALITY_IMAGE"
+  # before_script:
+  #   - echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login $CI_DEPENDENCY_PROXY_SERVER -u $CI_DEPENDENCY_PROXY_USER --password-stdin
+  #   - docker pull "$CODE_QUALITY_IMAGE"
