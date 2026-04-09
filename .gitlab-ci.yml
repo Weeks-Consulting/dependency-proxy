@@ -33,7 +33,7 @@ code_quality:
       alias: docker
       command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
       variables:
-        DOCKERD_ROOTLESS_ROOTLESSKIT_FLAGS: --net=slirp4netns
+        DOCKERD_ROOTLESS_ROOTLESSKIT_NET: slirp4netns
   # before_script:
   #   - echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login $CI_DEPENDENCY_PROXY_SERVER -u $CI_DEPENDENCY_PROXY_USER --password-stdin
   #   - docker pull "$CODE_QUALITY_IMAGE"
