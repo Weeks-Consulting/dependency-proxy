@@ -2,7 +2,6 @@ include:
   - template: Auto-DevOps.gitlab-ci.yml
 
 # variables:
-  # DOCKER_HOST: tcp://docker:2375
   # CI_DEBUG_SERVICES: true
   # CI_DEBUG_TRACE: true
 
