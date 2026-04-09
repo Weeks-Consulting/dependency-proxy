@@ -17,7 +17,7 @@ build:
       alias: docker
       command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
       variables:
-        DOCKERD_ROOTLESS_ROOTLESSKIT_NET: slirp4netns      
+        DOCKERD_ROOTLESS_ROOTLESSKIT_NET: slirp4netns
   # Hot patching the build script since it doesn't have a native way to set docker host for the build container.
   before_script:
     - sed -i 's~--builder "$builder"~--builder "$builder" --docker-host=unix:///run/user/1000/docker.sock~' /build/build.sh
@@ -28,7 +28,7 @@ code_quality:
       CODECLIMATE_PREFIX: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}
       CODECLIMATE_REGISTRY: ${CI_DEPENDENCY_PROXY_SERVER}
       CODECLIMATE_REGISTRY_USERNAME: ${CI_DEPENDENCY_PROXY_USER}
-      CODECLIMATE_REGISTRY_PASSWORD: ${CI_DEPENDENCY_PROXY_PASSWORD}      
+      CODECLIMATE_REGISTRY_PASSWORD: ${CI_DEPENDENCY_PROXY_PASSWORD}
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29
   services:
     - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29-dind-rootless
@@ -36,6 +36,3 @@ code_quality:
       command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
       variables:
         DOCKERD_ROOTLESS_ROOTLESSKIT_NET: slirp4netns
-  # before_script:
-  #   - echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login $CI_DEPENDENCY_PROXY_SERVER -u $CI_DEPENDENCY_PROXY_USER --password-stdin
-  #   - docker pull "$CODE_QUALITY_IMAGE"
