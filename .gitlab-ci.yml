@@ -1,0 +1,37 @@
+include:
+  - template: Auto-DevOps.gitlab-ci.yml
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_SOCKET_PATH: /run/user/1000/docker.sock
+  # CI_DEBUG_SERVICES: true
+  # CI_DEBUG_TRACE: true
+
+build:
+  variables:
+    AUTO_DEVOPS_BUILD_IMAGE_CNB_BUILDER: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/heroku/builder:24
+    AUTO_DEVOPS_BUILD_IMAGE_CNB_RUN_IMAGE: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/heroku/heroku:24
+    AUTO_DEVOPS_BUILD_IMAGE_CNB_LIFECYCLE_IMAGE: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/buildpacksio/lifecycle:0.21.7
+    AUTO_DEVOPS_BUILD_IMAGE_FORWARDED_CI_VARIABLES: BP_JVM_VERSION=25
+  services:
+    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29-dind-rootless
+      alias: docker
+      command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
+  # Hot patching the build script since it doesn't have a native way to set docker host for the build container.
+  before_script:
+    - sed -i 's~--builder "$builder"~--builder "$builder" --docker-host=unix://${DOCKER_SOCKET_PATH}~' /build/build.sh
+
+code_quality:
+  variables:
+      DOCKER_SOCKET_PATH: ${DOCKER_SOCKET_PATH}
+      CODECLIMATE_PREFIX: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}
+      CODECLIMATE_REGISTRY: ${CI_DEPENDENCY_PROXY_SERVER}
+      CODECLIMATE_REGISTRY_USERNAME: ${CI_DEPENDENCY_PROXY_USER}
+      CODECLIMATE_REGISTRY_PASSWORD: ${CI_DEPENDENCY_PROXY_PASSWORD}
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29
+  services:
+    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29-dind-rootless
+      alias: docker
+      command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
+  before_script:
+    - echo "$CI_DEPENDENCY_PROXY_PASSWORD" | docker login $CI_DEPENDENCY_PROXY_SERVER -u $CI_DEPENDENCY_PROXY_USER --password-stdin
