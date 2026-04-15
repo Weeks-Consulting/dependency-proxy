@@ -1,10 +1,18 @@
 package us.weeksconsulting.dependency_proxy.controllers;
 
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+
+import java.io.BufferedInputStream;
+import java.io.InputStream;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.CloseShieldInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.client.RestClient;
@@ -18,14 +26,16 @@ public class ProxyRoutingController {
     public ResponseEntity<StreamingResponseBody> getRequest(@PathVariable String repository) {
         String url = "https://archive.apache.org/dist/nifi/2.9.0/minifi-toolkit-2.9.0-bin.zip";
 
-        RestClient defaultClient = RestClient.create();
+        LOGGER.info("Returning RestClient");
+        return RestClient.create().get().uri(url).exchange((request, response) -> {
+            HttpHeaders responseHeaders = new HttpHeaders();
+            responseHeaders.addAll(CONTENT_TYPE, response.getHeaders().get(CONTENT_TYPE));
 
-        return defaultClient.get().uri(url).exchange((request, response) -> {
-            LOGGER.info("HTTP Status {}", response.getStatusCode());
-            LOGGER.info("HTTP Headers -> {}", response.getHeaders());
+            LOGGER.info("Returning ResponseEntity");
             return ResponseEntity.ok()
-                    .headers(response.getHeaders())
-                    .body(outputStream -> StreamUtils.copy(response.getBody(), outputStream));
-        });
+                    .headers(responseHeaders)
+                    .body(outputStream -> response.getBody().transferTo(outputStream));
+        }, false);
+
     }
 }
