@@ -1,7 +1,5 @@
 package us.weeksconsulting.dependency_proxy.controllers;
 
-import java.io.InputStream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -25,16 +23,9 @@ public class ProxyRoutingController {
         return defaultClient.get().uri(url).exchange((request, response) -> {
             LOGGER.info("HTTP Status {}", response.getStatusCode());
             LOGGER.info("HTTP Headers -> {}", response.getHeaders());
-            try (InputStream inputStream = response.getBody();) {
-
-                StreamingResponseBody stream = outputStream -> {
-                    StreamUtils.copy(inputStream, outputStream);
-                };
-                
-                return ResponseEntity.ok()
-                        .headers(response.getHeaders())
-                        .body(stream);
-            }
+            return ResponseEntity.ok()
+                    .headers(response.getHeaders())
+                    .body(outputStream -> StreamUtils.copy(response.getBody(), outputStream));
         });
     }
 }
