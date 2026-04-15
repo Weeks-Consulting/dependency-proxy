@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: dependency-proxy
+  mvc:
+    async:
+      request-timeout: -1  
