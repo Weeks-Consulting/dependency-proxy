@@ -1,14 +1,23 @@
+spring:
+  datasource:
+    username: sa
+    password: sa
+    url: jdbc:h2:file:./spring-boot-testdb
+
 logging:
-    level:
-        org.springframework: INFO
+  level:
+    org.springframework: INFO
+    us.weeksconsulting: TRACE
 
 application:
+  storage:
+    type: local
+    location: ./storage
   repositories:
-    - name: apache
-      type: raw
-      base_url: https://archive.apache.org
-      cache_ttl: 30m
-    - name: nodejs
-      type: raw
-      base_url: https://dist.nodejs.org
-      cache_ttl: 30m
+    raw:
+      apache:
+        base_url: https://archive.apache.org
+        cache_ttl: 30d
+      nodejs:
+        base_url: https://dist.nodejs.org
+        cache_ttl: 30d

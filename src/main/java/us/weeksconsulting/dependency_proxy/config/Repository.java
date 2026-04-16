@@ -7,29 +7,17 @@ import org.slf4j.LoggerFactory;
 
 public class Repository {
     private static final Logger LOGGER = LoggerFactory.getLogger(Repository.class);
-    private final String name;
-    private final String type;
     private final String baseUrl;
     private final Duration cacheTTL;
 
-    public Repository(String name, String type, String baseUrl, Duration cacheTTL) {
-        this.name = name;
-        this.type = type;
+    public Repository(String baseUrl, Duration cacheTTL) {        
         this.baseUrl = baseUrl;
         this.cacheTTL = cacheTTL;
-        LOGGER.error("Constructed Repository: {} {} {}", name, type, baseUrl, cacheTTL);
+        LOGGER.trace("Constructed Repository: {} {} {}", baseUrl, cacheTTL);
     }
 
     public static Logger getLogger() {
         return LOGGER;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getType() {
-        return type;
     }
 
     public String getBaseUrl() {
@@ -42,7 +30,7 @@ public class Repository {
 
     @Override
     public String toString() {
-        return "Repository [name=" + name + ", type=" + type + ", baseUrl=" + baseUrl + ", cacheTTL=" + cacheTTL + "]";
+        return "Repository [baseUrl=" + baseUrl + ", cacheTTL=" + cacheTTL + "]";
     }
 
 }

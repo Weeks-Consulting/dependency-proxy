@@ -1,6 +1,6 @@
 package us.weeksconsulting.dependency_proxy.config;
 
-import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,20 +10,26 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ApplicationConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationConfig.class);
 
-    private final List<Repository> repositories;
+    private final Storage storage;
+    private final Map<String, Map<String, Repository>> repositories;
 
-    public ApplicationConfig(List<Repository> repositories) {
-        LOGGER.error("Constructed RespositoryConfigs: {}", repositories);
+    public ApplicationConfig(Storage storage, Map<String, Map<String, Repository>> repositories) {
+        LOGGER.trace("Constructed RespositoryConfigs: {}", repositories);
+        this.storage = storage;
         this.repositories = repositories;
     }
 
-    public List<Repository> getRepositories() {
+    public Storage getStorage() {
+        return storage;
+    }
+
+    public Map<String, Map<String, Repository>> getRepositories() {
         return repositories;
     }
 
     @Override
     public String toString() {
-        return "ApplicationConfig [repositories=" + repositories + "]";
+        return "ApplicationConfig [storage=" + storage + ", repositories=" + repositories + "]";
     }
 
 }
