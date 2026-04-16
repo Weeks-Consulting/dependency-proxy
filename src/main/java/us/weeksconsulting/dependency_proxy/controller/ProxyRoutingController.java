@@ -12,16 +12,16 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import us.weeksconsulting.dependency_proxy.config.RespositoryConfigs;
+import us.weeksconsulting.dependency_proxy.config.ApplicationConfig;
 
 @Controller
 public class ProxyRoutingController {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProxyRoutingController.class);
 
-    final RespositoryConfigs repositoryConfigs;
+    final ApplicationConfig applicationConfig;
 
-    public ProxyRoutingController(RespositoryConfigs repositoryConfigs) {
-        this.repositoryConfigs = repositoryConfigs;
+    public ProxyRoutingController(ApplicationConfig applicationConfig) {
+        this.applicationConfig = applicationConfig;
     }
 
     @GetMapping("/{repository}/{*path}")
@@ -30,7 +30,7 @@ public class ProxyRoutingController {
         LOGGER.info("repository: {}", repository);
         LOGGER.info("path: {}", path);
 
-        LOGGER.info("repositoryConfigs: {}", repositoryConfigs);
+        LOGGER.info("repository: {}", repository);
 
         String baseUrl = "https://archive.apache.org";
 
