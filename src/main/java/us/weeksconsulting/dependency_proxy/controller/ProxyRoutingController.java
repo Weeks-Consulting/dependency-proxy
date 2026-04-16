@@ -30,7 +30,7 @@ public class ProxyRoutingController {
         LOGGER.info("repository: {}", repository);
         LOGGER.info("path: {}", path);
 
-        LOGGER.info("repository: {}", repository);
+        LOGGER.info("applicationConfig: {}", applicationConfig);
 
         String baseUrl = "https://archive.apache.org";
 

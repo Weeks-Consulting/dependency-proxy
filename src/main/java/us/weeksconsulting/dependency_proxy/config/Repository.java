@@ -40,4 +40,9 @@ public class Repository {
         return cacheTTL;
     }
 
+    @Override
+    public String toString() {
+        return "Repository [name=" + name + ", type=" + type + ", baseUrl=" + baseUrl + ", cacheTTL=" + cacheTTL + "]";
+    }
+
 }

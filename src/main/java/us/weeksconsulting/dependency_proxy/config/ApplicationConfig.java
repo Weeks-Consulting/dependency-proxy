@@ -23,4 +23,9 @@ public class ApplicationConfig {
         return repositories;
     }
 
+    @Override
+    public String toString() {
+        return "ApplicationConfig [repositories=" + repositories + "]";
+    }
+
 }
