@@ -1,7 +1,6 @@
 package us.weeksconsulting.dependency_proxy.manager;
 
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;

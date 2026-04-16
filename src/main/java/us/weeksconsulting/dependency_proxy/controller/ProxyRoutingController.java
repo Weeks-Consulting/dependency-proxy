@@ -49,6 +49,7 @@ public class ProxyRoutingController {
 
         String baseUrl = repository.getBaseUrl();
 
+        @SuppressWarnings("unused")
         InputStream cachedInputStream = cacheManager.getOrCache(repositoryType, repositoryName, urlPath, urlParams); 
 
         LOGGER.info("Returning RestClient");
