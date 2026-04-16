@@ -1,5 +1,6 @@
 package us.weeksconsulting.dependency_proxy;
 
+import org.springframework.boot.devtools.restart.RestartScope;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
@@ -10,9 +11,10 @@ import org.testcontainers.utility.DockerImageName;
 class TestcontainersConfiguration {
 
 	@Bean
+	// @RestartScope
 	@ServiceConnection
 	PostgreSQLContainer postgresContainer() {
-		return new PostgreSQLContainer(DockerImageName.parse("postgres:latest"));
+		return new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"));
 	}
 
 }

@@ -1,0 +1,1 @@
+select 'Init Schema' as result

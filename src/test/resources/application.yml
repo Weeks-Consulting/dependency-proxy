@@ -1,0 +1,23 @@
+logging:
+    level:
+        org.springframework: DEBUG
+
+application:
+  repositories:
+    raw:
+      apache:
+        base_url: https://archive.apache.org
+        cache_ttl: 30m
+      nodejs:
+        base_url: https://dist.nodejs.org
+        cache_ttl: 30m
+      chrome:
+        base_url: https://google.com
+        cache_ttl: 30m
+    docker:
+      docker-io:
+        base_url: https://registry-1.docker.io
+        cache_ttl: 30m
+      ghcr:
+        base_url: https://ghcr.io
+        cache_ttl: 30m
