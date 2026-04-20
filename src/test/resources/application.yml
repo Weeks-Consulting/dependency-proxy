@@ -21,3 +21,6 @@ application:
       nodejs:
         base_url: https://dist.nodejs.org
         cache_ttl: 30d
+      debian:
+        base_url: http://deb.debian.org
+        cache_ttl: 30d

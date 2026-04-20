@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -44,6 +45,8 @@ public class CacheManager {
 
         Repository repo = applicationConfig.getRepositories().get(repositoryType).get(repositoryName);
 
+        LOGGER.trace("repo: {}", repo);
+
         RepositoryCacheEntry existingRepositoryCacheEntry = repoDao.getRepositoryCacheEntry(
                 repositoryType,
                 repositoryName,
@@ -55,13 +58,28 @@ public class CacheManager {
         if (existingRepositoryCacheEntry == null) {
             LOGGER.trace("Cache Entry Not Found - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
                     repositoryType, repositoryName, urlPath, urlParams);
-            return RestClient.create().get().uri(repo.getBaseUrl() + urlPath).exchange((request, response) -> {
-                HttpHeaders responseHeaders = new HttpHeaders();
-                String mimeType = response.getHeaders().get(CONTENT_TYPE).getFirst();
-                responseHeaders.add(CONTENT_TYPE, mimeType);
+            String url = repo.getBaseUrl() + urlPath;
+
+            LOGGER.trace("url: {}", url);
+            return RestClient.create().get().uri(url).exchange((request, response) -> {
+
+                LOGGER.trace("responseHeaders: {}", response.getHeaders());
+                List<String> conentHeaders = response.getHeaders().get(CONTENT_TYPE);
+                String mimeType = null;
+                if (conentHeaders != null && !conentHeaders.isEmpty()) {
+                    mimeType = response.getHeaders().get(CONTENT_TYPE).getFirst();
+                }
+
                 RepositoryCacheEntry newRepositoryCacheEntry = repoDao.putRepositoryCacheEntry(repositoryType,
                         repositoryName, urlPath,
                         urlParams, mimeType);
+
+                HttpHeaders responseHeaders = new HttpHeaders();
+
+                if (newRepositoryCacheEntry.getMimeType() != null) {
+                    responseHeaders.add(CONTENT_TYPE, mimeType);
+                }
+
                 InputStream inputStream = getOrCache(
                         response.getBody(),
                         newRepositoryCacheEntry.getObjectPath(),
@@ -71,6 +89,8 @@ public class CacheManager {
                         .body(outputStream -> inputStream.transferTo(outputStream));
             });
         } else {
+            LOGGER.trace("Cache Entry Found - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
+                    repositoryType, repositoryName, urlPath, urlParams);
             HttpHeaders responseHeaders = new HttpHeaders();
             responseHeaders.add(CONTENT_TYPE, existingRepositoryCacheEntry.getMimeType());
             InputStream inputStream = getOrCache(
