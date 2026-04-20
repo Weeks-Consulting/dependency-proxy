@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.dao;
+package us.weeksconsulting.dependencyproxy.config.dao;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
+import us.weeksconsulting.dependencyproxy.config.model.RepositoryCacheEntry;
 
 @Component
 public class RepositoryCacheEntryDao {

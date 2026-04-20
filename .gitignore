@@ -32,5 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 
-### Local Storage ###
+### Local Stuff ###
 storage/
+spring-boot.log

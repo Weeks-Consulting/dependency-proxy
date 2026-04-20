@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.config;
+package us.weeksconsulting.dependencyproxy.config.model;
 
 import java.time.Duration;
 

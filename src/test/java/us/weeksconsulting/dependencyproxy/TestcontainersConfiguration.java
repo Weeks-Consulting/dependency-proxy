@@ -16,7 +16,7 @@ import com.github.dockerjava.api.model.Ports;
 class TestcontainersConfiguration {
 
     @RestartScope
-    @Bean
+    @Bean()
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {
         PostgreSQLContainer postgresContainer = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"));

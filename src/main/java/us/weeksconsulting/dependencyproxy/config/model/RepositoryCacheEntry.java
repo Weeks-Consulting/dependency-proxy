@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.model;
+package us.weeksconsulting.dependencyproxy.config.model;
 
 import java.util.UUID;
 

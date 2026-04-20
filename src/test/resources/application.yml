@@ -1,12 +1,13 @@
-# spring:
-#   datasource:
-#     username: sa
-#     password: sa
-#     url: jdbc:h2:file:./spring-boot-testdb
+spring:
+  autoconfigure:
+    # Get rid of annoying error on shutdown.
+    exclude: org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
 
 logging:
+  file:
+    name: spring-boot.log
   level:
-    org.springframework: INFO
+    org.springframework: TRACE
     us.weeksconsulting: TRACE
 
 application:

@@ -22,9 +22,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
-import us.weeksconsulting.dependencyproxy.config.Repository;
-import us.weeksconsulting.dependencyproxy.dao.RepositoryCacheEntryDao;
-import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
+import us.weeksconsulting.dependencyproxy.config.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependencyproxy.config.model.Repository;
+import us.weeksconsulting.dependencyproxy.config.model.RepositoryCacheEntry;
 
 @Component
 public class CacheManager {

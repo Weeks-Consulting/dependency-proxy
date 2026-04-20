@@ -6,6 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import us.weeksconsulting.dependencyproxy.config.model.Repository;
+import us.weeksconsulting.dependencyproxy.config.model.Storage;
+
 @ConfigurationProperties(prefix = "application")
 public class ApplicationConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationConfig.class);
