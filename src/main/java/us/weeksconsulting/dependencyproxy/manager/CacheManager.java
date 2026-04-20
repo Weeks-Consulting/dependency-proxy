@@ -64,9 +64,9 @@ public class CacheManager {
             return RestClient.create().get().uri(url).exchange((request, response) -> {
 
                 LOGGER.trace("responseHeaders: {}", response.getHeaders());
-                List<String> conentHeaders = response.getHeaders().get(CONTENT_TYPE);
+                List<String> contentHeaders = response.getHeaders().get(CONTENT_TYPE);
                 String mimeType = null;
-                if (conentHeaders != null && !conentHeaders.isEmpty()) {
+                if (contentHeaders != null && !contentHeaders.isEmpty()) {
                     mimeType = response.getHeaders().get(CONTENT_TYPE).getFirst();
                 }
 
