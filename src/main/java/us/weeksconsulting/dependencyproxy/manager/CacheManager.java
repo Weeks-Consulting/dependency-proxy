@@ -146,10 +146,10 @@ public class CacheManager {
             PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
             TeeInputStream teeInputStream = new TeeInputStream(inputStream, pipedOutputStream);
 
-            fileService.writeFileAsync(pipedInputStream, pipedOutputStream, cacheFile);
+            fileService.writeFileAsync(teeInputStream, pipedOutputStream, cacheFile);
 
-            LOGGER.trace("returning teeInputStream");
-            return teeInputStream;
+            LOGGER.trace("returning pipedInputStream");
+            return pipedInputStream;
         } else {
             LOGGER.trace("cacheFile length: {}", cacheFile.length());
             LOGGER.trace("Returning cacheFile: {}", cacheFile.getAbsolutePath());

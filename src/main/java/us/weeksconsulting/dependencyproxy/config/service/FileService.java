@@ -22,6 +22,8 @@ public class FileService {
         try (InputStream inputStream = fileInputStream) {
             file.createNewFile();
             Files.copy(inputStream, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            outputStream.close();
         }
         LOGGER.trace("writeFileAsync finished");
     }
