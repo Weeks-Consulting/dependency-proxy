@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependency_proxy.config;
+package us.weeksconsulting.dependencyproxy.config;
 
 import java.util.Map;
 

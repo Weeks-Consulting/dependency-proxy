@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependency_proxy;
+package us.weeksconsulting.dependencyproxy;
 
 import org.springframework.boot.SpringApplication;
 

@@ -1,0 +1,137 @@
+package us.weeksconsulting.dependencyproxy.manager;
+
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Map;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
+import us.weeksconsulting.dependencyproxy.config.Repository;
+import us.weeksconsulting.dependencyproxy.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
+
+@Component
+public class CacheManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CacheManager.class);
+    private final ApplicationConfig applicationConfig;
+
+    private final RepositoryCacheEntryDao repoDao;
+
+    public CacheManager(ApplicationConfig applicationConfig, RepositoryCacheEntryDao repoDao) {
+        this.applicationConfig = applicationConfig;
+        this.repoDao = repoDao;
+    }
+
+    @Transactional
+    public ResponseEntity<StreamingResponseBody> getOrCache(String repositoryType, String repositoryName,
+            String urlPath,
+            Map<String, String> urlParams) throws IOException {
+
+        Repository repo = applicationConfig.getRepositories().get(repositoryType).get(repositoryName);
+
+        RepositoryCacheEntry existingRepositoryCacheEntry = repoDao.getRepositoryCacheEntry(
+                repositoryType,
+                repositoryName,
+                urlPath,
+                urlParams);
+
+        LOGGER.trace("repositoryCacheEntry: {}", existingRepositoryCacheEntry);
+
+        if (existingRepositoryCacheEntry == null) {
+            LOGGER.trace("Cache Entry Not Found - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
+                    repositoryType, repositoryName, urlPath, urlParams);
+            return RestClient.create().get().uri(repo.getBaseUrl() + urlPath).exchange((request, response) -> {
+                HttpHeaders responseHeaders = new HttpHeaders();
+                String mimeType = response.getHeaders().get(CONTENT_TYPE).getFirst();
+                responseHeaders.add(CONTENT_TYPE, mimeType);
+                RepositoryCacheEntry newRepositoryCacheEntry = repoDao.putRepositoryCacheEntry(repositoryType,
+                        repositoryName, urlPath,
+                        urlParams, mimeType);
+                InputStream inputStream = getOrCache(
+                        response.getBody(),
+                        newRepositoryCacheEntry.getObjectPath(),
+                        newRepositoryCacheEntry.getObjectId());
+                return ResponseEntity.ok()
+                        .headers(responseHeaders)
+                        .body(outputStream -> inputStream.transferTo(outputStream));
+            });
+        } else {
+            HttpHeaders responseHeaders = new HttpHeaders();
+            responseHeaders.add(CONTENT_TYPE, existingRepositoryCacheEntry.getMimeType());
+            InputStream inputStream = getOrCache(
+                    null,
+                    existingRepositoryCacheEntry.getObjectPath(),
+                    existingRepositoryCacheEntry.getObjectId());
+            return ResponseEntity.ok()
+                    .headers(responseHeaders)
+                    .body(outputStream -> inputStream.transferTo(outputStream));
+        }
+    }
+
+    private InputStream getOrCache(InputStream inputStream, String objectPath, UUID objectId) throws IOException {
+        String cacheType = applicationConfig.getStorage().getType();
+
+        switch (cacheType) {
+            case "local":
+                return getOrCacheLocal(inputStream, objectPath, objectId);
+            case "s3":
+                return getOrCacheS3(inputStream, objectPath, objectId);
+            default:
+                return null;
+        }
+    }
+
+    private InputStream getOrCacheLocal(InputStream inputStream, String objectPath, UUID objectId) throws IOException {
+        String storageLocation = applicationConfig.getStorage().getLocation();
+
+        LOGGER.trace("storageLocation: {}", storageLocation);
+
+        File cacheDirectory = new File(applicationConfig.getStorage().getLocation() + objectPath);
+
+        LOGGER.trace("cacheDirectory: {}", cacheDirectory.getPath());
+
+        if (!cacheDirectory.exists()) {
+            LOGGER.trace("cacheDirectory does not exist creating ...");
+            cacheDirectory.mkdirs();
+        }
+
+        File cacheFile = new File(cacheDirectory.getPath() + File.separator + String.valueOf(objectId));
+
+        LOGGER.trace("cacheFile: {}", cacheFile.getPath());
+
+        LOGGER.trace("cacheFile length: {}", cacheFile.length());
+
+        if (!cacheFile.exists()) {
+            LOGGER.trace("cacheFile does not exist creating ...");
+            cacheFile.createNewFile();
+            try (InputStream is = inputStream) {
+                Files.copy(is, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+
+        LOGGER.trace("cacheFile length: {}", cacheFile.length());
+
+        LOGGER.trace("Returning cacheFile: {}", cacheFile.getAbsolutePath());
+
+        return new FileInputStream(cacheFile);
+    }
+
+    private InputStream getOrCacheS3(InputStream inputStream, String objectPath, UUID objectId) {
+        return null;
+    }
+}
