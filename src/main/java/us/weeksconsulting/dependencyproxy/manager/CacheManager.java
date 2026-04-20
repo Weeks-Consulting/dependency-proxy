@@ -6,12 +6,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.io.input.TeeInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +26,7 @@ import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
 import us.weeksconsulting.dependencyproxy.config.dao.RepositoryCacheEntryDao;
 import us.weeksconsulting.dependencyproxy.config.model.Repository;
 import us.weeksconsulting.dependencyproxy.config.model.RepositoryCacheEntry;
+import us.weeksconsulting.dependencyproxy.config.service.FileService;
 
 @Component
 public class CacheManager {
@@ -32,10 +34,12 @@ public class CacheManager {
     private final ApplicationConfig applicationConfig;
 
     private final RepositoryCacheEntryDao repoDao;
+    private final FileService fileService;
 
-    public CacheManager(ApplicationConfig applicationConfig, RepositoryCacheEntryDao repoDao) {
+    public CacheManager(ApplicationConfig applicationConfig, RepositoryCacheEntryDao repoDao, FileService fileService) {
         this.applicationConfig = applicationConfig;
         this.repoDao = repoDao;
+        this.fileService = fileService;
     }
 
     @Transactional
@@ -87,7 +91,7 @@ public class CacheManager {
                 return ResponseEntity.ok()
                         .headers(responseHeaders)
                         .body(outputStream -> inputStream.transferTo(outputStream));
-            });
+            }, false);
         } else {
             LOGGER.trace("Cache Entry Found - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
                     repositoryType, repositoryName, urlPath, urlParams);
@@ -135,20 +139,22 @@ public class CacheManager {
         LOGGER.trace("cacheFile: {}", cacheFile.getPath());
 
         LOGGER.trace("cacheFile length: {}", cacheFile.length());
-
         if (!cacheFile.exists()) {
             LOGGER.trace("cacheFile does not exist creating ...");
-            cacheFile.createNewFile();
-            try (InputStream is = inputStream) {
-                Files.copy(is, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            }
+
+            PipedInputStream pipedInputStream = new PipedInputStream();
+            PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
+            TeeInputStream teeInputStream = new TeeInputStream(inputStream, pipedOutputStream);
+
+            fileService.writeFileAsync(pipedInputStream, pipedOutputStream, cacheFile);
+
+            LOGGER.trace("returning teeInputStream");
+            return teeInputStream;
+        } else {
+            LOGGER.trace("cacheFile length: {}", cacheFile.length());
+            LOGGER.trace("Returning cacheFile: {}", cacheFile.getAbsolutePath());
+            return new FileInputStream(cacheFile);
         }
-
-        LOGGER.trace("cacheFile length: {}", cacheFile.length());
-
-        LOGGER.trace("Returning cacheFile: {}", cacheFile.getAbsolutePath());
-
-        return new FileInputStream(cacheFile);
     }
 
     private InputStream getOrCacheS3(InputStream inputStream, String objectPath, UUID objectId) {

@@ -7,7 +7,7 @@ logging:
   file:
     name: spring-boot.log
   level:
-    org.springframework: TRACE
+    org.springframework: INFO
     us.weeksconsulting: TRACE
 
 application:

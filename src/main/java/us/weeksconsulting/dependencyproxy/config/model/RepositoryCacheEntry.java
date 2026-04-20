@@ -11,8 +11,14 @@ public class RepositoryCacheEntry {
     private final String cacheObjectPath;
     private final UUID cacheObjectId;
 
-    public RepositoryCacheEntry(String repositoryType, String repositoryName, String urlPath, String urlParams,
-            String mimeType, String cacheObjectPath, UUID cacheObjectId) {
+    public RepositoryCacheEntry(
+            String repositoryType,
+            String repositoryName,
+            String urlPath,
+            String urlParams,
+            String mimeType,
+            String cacheObjectPath,
+            UUID cacheObjectId) {
         this.repositoryType = repositoryType;
         this.repositoryName = repositoryName;
         this.urlPath = urlPath;
