@@ -97,15 +97,15 @@ public class RepositoryCacheEntryDao {
             // 1. Calculate the SHA-256 hash of the file
             MessageDigest digest;
             digest = MessageDigest.getInstance("SHA-256");
-            byte[] encodedhash = digest.digest((urlPath + serializedUrlParams).getBytes());
-            String sha256Hex = Hex.encodeHexString(encodedhash);
+            byte[] encodedHash = digest.digest((urlPath + serializedUrlParams).getBytes());
+            String sha256Hex = Hex.encodeHexString(encodedHash);
 
             // 2. Determine the folder structure from the hash
             if (sha256Hex.length() < 4) {
                 throw new RuntimeException("Hash is too short to create a directory structure.");
             }
-            String level1Dir = sha256Hex.substring(0, 2);
-            String level2Dir = sha256Hex.substring(2, 4);
+            String level1Dir = sha256Hex.substring(0, 1);
+            String level2Dir = sha256Hex.substring(1, 2);
 
             return "/" + level1Dir + "/" + level2Dir;
         } catch (NoSuchAlgorithmException e) {
