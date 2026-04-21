@@ -17,7 +17,7 @@ application:
   repositories:
     raw:
       apache:
-        base_url: https://archive.apache.org
+        base_url: https://dlcdn.apache.org
         cache_ttl: 30d
       nodejs:
         base_url: https://dist.nodejs.org
