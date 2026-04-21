@@ -26,6 +26,7 @@ import us.weeksconsulting.dependencyproxy.config.model.Repository;
 import us.weeksconsulting.dependencyproxy.dao.RepositoryCacheEntryDao;
 import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
 import us.weeksconsulting.dependencyproxy.service.FileService;
+import us.weeksconsulting.dependencyproxy.util.BetterTeeInputStream;
 
 @Component
 public class CacheManager {
@@ -93,7 +94,7 @@ public class CacheManager {
                 InputStream inputStream = response.getBody();
                 return ResponseEntity.ok()
                         .headers(responseHeaders).body(outputStream -> {
-                            InputStream teeInputStream = new TeeInputStream(inputStream, outputStream);
+                            BetterTeeInputStream teeInputStream = new BetterTeeInputStream(inputStream, outputStream);
                             LOGGER.trace("Calling getOrCache");
                             getOrCache(
                                     teeInputStream,
