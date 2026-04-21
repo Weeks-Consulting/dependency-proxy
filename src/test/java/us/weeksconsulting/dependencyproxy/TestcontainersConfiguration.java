@@ -15,7 +15,7 @@ import com.github.dockerjava.api.model.Ports;
 @TestConfiguration(proxyBeanMethods = false)
 class TestcontainersConfiguration {
 
-    @RestartScope
+    // @RestartScope
     @Bean()
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {

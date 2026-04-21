@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.config.service;
+package us.weeksconsulting.dependencyproxy.service;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,8 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
-import us.weeksconsulting.dependencyproxy.config.dao.RepositoryCacheEntryDao;
-import us.weeksconsulting.dependencyproxy.config.model.RepositoryCacheEntry;
+import us.weeksconsulting.dependencyproxy.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
 
 @Service
 public class FileService {
@@ -37,24 +37,22 @@ public class FileService {
 
     @Async
     @Transactional
-    public void writeFileAsync(
-            InputStream inputStream,
-            OutputStream outputStream,
-            UUID cacheObjectId,
-            File cacheDirectory,
+    public void writeFileAsync(InputStream inputStream, UUID cacheObjectId, File cacheDirectory,
             File cacheFile) throws IOException {
         LOGGER.trace("writeFileAsync started");
+        LOGGER.trace("cacheObjectId: {}", cacheObjectId);
+        LOGGER.trace("cacheDirectory: {}", cacheDirectory);
 
         String storageLocation = appConfig.getStorage().getLocation();
         LOGGER.trace("storageLocation: {}", storageLocation);
 
         RepositoryCacheEntry repoEntry = repoDao.getCacheEntryForUpdate(cacheObjectId);
+        LOGGER.trace("repoEntry: {}", repoEntry);
 
         if (repoEntry == null) {
             LOGGER.warn("Unable to get row lock. Assuming another thread is already caching this data");
-            IOUtils.consume(inputStream);
-            inputStream.close();
-            outputStream.close();
+            // IOUtils.consume(inputStream);
+            // inputStream.close();
         } else {
             if (!cacheDirectory.exists()) {
                 LOGGER.trace("cacheDirectory does not exist creating ...");
@@ -68,7 +66,11 @@ public class FileService {
                 DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
 
                 cacheFile.createNewFile();
-                Files.copy(digestInputStream, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                // Files.copy(digestInputStream, cacheFile.toPath(),
+                // StandardCopyOption.REPLACE_EXISTING);
+
+                OutputStream fos = Files.newOutputStream(cacheFile.toPath());
+                digestInputStream.transferTo(fos);
 
                 LOGGER.trace("cacheFile length: {}", cacheFile.length());
 
@@ -79,8 +81,7 @@ public class FileService {
                 LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
                 throw new RuntimeException(e);
             } finally {
-                inputStream.close();
-                outputStream.close();
+                // inputStream.close();
             }
 
         }

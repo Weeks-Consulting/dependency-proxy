@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.config.model;
+package us.weeksconsulting.dependencyproxy.model;
 
 import java.sql.Timestamp;
 import java.util.UUID;
