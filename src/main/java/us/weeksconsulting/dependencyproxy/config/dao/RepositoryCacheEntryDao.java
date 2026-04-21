@@ -79,7 +79,7 @@ public class RepositoryCacheEntryDao {
                 .optional().orElse(null);
     }
 
-    public Optional<RepositoryCacheEntry> insertCacheEntry(
+    public RepositoryCacheEntry insertGetCacheEntry(
             String repositoryType,
             String repositoryName,
             String urlPath,
@@ -127,7 +127,8 @@ public class RepositoryCacheEntryDao {
                 .param("inserted_at", Timestamp.from(Instant.now()))
                 .param("updated_at", Timestamp.from(Instant.now()))
                 .query(RepositoryCacheEntry.class)
-                .optional();
+                .optional()
+                .orElseGet(() -> getCacheEntry(repositoryType, repositoryName, urlPath, urlParams));
 
     }
 

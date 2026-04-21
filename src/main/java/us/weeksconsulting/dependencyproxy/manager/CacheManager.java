@@ -77,21 +77,12 @@ public class CacheManager {
                 RepositoryCacheEntry repositoryCacheEntry;
 
                 if (existingRepositoryCacheEntry == null) {
-                    // During concurrency it's possible another thread has 
-                    // already added a record and potentially cached the data.
-                    // Even though it's already been cached we will pull it again.
-                    // TODO - Refactor to eliminate the double pull.
-                    repositoryCacheEntry = repoDao.insertCacheEntry(
+                    repositoryCacheEntry = repoDao.insertGetCacheEntry(
                             repositoryType,
                             repositoryName,
                             urlPath,
                             urlParams,
-                            mimeType).orElse(
-                                    repoDao.getCacheEntry(
-                                            repositoryType,
-                                            repositoryName,
-                                            urlPath,
-                                            urlParams));
+                            mimeType);
                 } else {
                     repositoryCacheEntry = existingRepositoryCacheEntry;
                 }
@@ -123,6 +114,7 @@ public class CacheManager {
                     existingRepositoryCacheEntry.getCacheObjectPath(),
                     existingRepositoryCacheEntry.getCacheObjectId(),
                     true);
+            LOGGER.trace("Returning ResponseEntity");
             return ResponseEntity.ok()
                     .headers(responseHeaders)
                     .body(outputStream -> inputStream.transferTo(outputStream));
@@ -174,6 +166,6 @@ public class CacheManager {
 
     private InputStream getOrCacheS3(InputStream inputStream, String cacheObjectPath, UUID cacheObjectId,
             boolean isCached) {
-        return null;
+        throw new UnsupportedOperationException("S3 Support Not Implemented");
     }
 }

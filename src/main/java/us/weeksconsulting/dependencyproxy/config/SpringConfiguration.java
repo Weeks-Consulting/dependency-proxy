@@ -15,12 +15,12 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class SpringConfiguration {
 
     @Bean
-    public Executor taskExecutor() {
+    public Executor cacheBackgroundTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
         executor.setMaxPoolSize(2);
         executor.setQueueCapacity(500);
-        executor.setThreadNamePrefix("GithubLookup-");
+        executor.setThreadNamePrefix("cacheBackgroundTask-");
         executor.initialize();
         return executor;
     }
@@ -28,8 +28,7 @@ public class SpringConfiguration {
     @Bean
     public TomcatServletWebServerFactory tomcatServletWebServerFactory() {
         TomcatServletWebServerFactory factory = new TomcatServletWebServerFactory();
-        factory.addConnectorCustomizers(connector -> connector.setAsyncTimeout(600000)); // Set async timeout to 10
-                                                                                         // minutes
+        factory.addConnectorCustomizers(connector -> connector.setAsyncTimeout(3600000)); // Set async timeout to 1 hour
         return factory;
     }
 

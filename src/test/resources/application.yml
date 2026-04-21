@@ -8,6 +8,7 @@ logging:
     name: spring-boot.log
   level:
     org.springframework: INFO
+    org.springframework.jdbc: TRACE
     us.weeksconsulting: TRACE
 
 application:

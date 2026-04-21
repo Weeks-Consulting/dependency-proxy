@@ -6,8 +6,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,20 +59,30 @@ public class FileService {
             if (!cacheDirectory.exists()) {
                 LOGGER.trace("cacheDirectory does not exist creating ...");
                 cacheDirectory.mkdirs();
-            }            
+            }
             LOGGER.trace("cacheFile length: {}", cacheFile.length());
 
             try {
+                MessageDigest fileHash;
+                fileHash = MessageDigest.getInstance("SHA-256");
+                DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
+
                 cacheFile.createNewFile();
-                Files.copy(inputStream, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(digestInputStream, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                LOGGER.trace("cacheFile length: {}", cacheFile.length());
+
+                LOGGER.trace("cacheFileHash: {}", Hex.encodeHexString(fileHash.digest()));
+
+                repoDao.updateCacheEntry(cacheObjectId, true);
+            } catch (NoSuchAlgorithmException e) {
+                LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
+                throw new RuntimeException(e);
             } finally {
                 inputStream.close();
                 outputStream.close();
             }
 
-            LOGGER.trace("cacheFile length: {}", cacheFile.length());
-
-            repoDao.updateCacheEntry(cacheObjectId, true);
         }
 
         LOGGER.trace("writeFileAsync finished");
