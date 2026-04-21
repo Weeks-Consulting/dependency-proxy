@@ -6,6 +6,9 @@ create table repository_cache (
     mime_type text,
     cache_object_path text not null,
     cache_object_id uuid not null,
+    is_cached boolean not null,
     inserted_at timestamp not null,
-    primary key(repository_type, repository_name, url_path, url_params)
+    updated_at timestamp not null,
+    primary key(repository_type, repository_name, url_path, url_params),
+    unique(cache_object_id)
 );

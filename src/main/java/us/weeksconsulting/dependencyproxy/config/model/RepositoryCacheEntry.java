@@ -1,5 +1,6 @@
 package us.weeksconsulting.dependencyproxy.config.model;
 
+import java.sql.Timestamp;
 import java.util.UUID;
 
 public class RepositoryCacheEntry {
@@ -10,6 +11,9 @@ public class RepositoryCacheEntry {
     private final String mimeType;
     private final String cacheObjectPath;
     private final UUID cacheObjectId;
+    private final boolean isCached;
+    private final Timestamp insertedAt;
+    private final Timestamp updatedAt;
 
     public RepositoryCacheEntry(
             String repositoryType,
@@ -18,7 +22,10 @@ public class RepositoryCacheEntry {
             String urlParams,
             String mimeType,
             String cacheObjectPath,
-            UUID cacheObjectId) {
+            UUID cacheObjectId,
+            boolean isCached,
+            Timestamp insertedAt,
+            Timestamp updatedAt) {
         this.repositoryType = repositoryType;
         this.repositoryName = repositoryName;
         this.urlPath = urlPath;
@@ -26,6 +33,9 @@ public class RepositoryCacheEntry {
         this.mimeType = mimeType;
         this.cacheObjectPath = cacheObjectPath;
         this.cacheObjectId = cacheObjectId;
+        this.isCached = isCached;
+        this.insertedAt = insertedAt;
+        this.updatedAt = updatedAt;
     }
 
     public String getRepositoryType() {
@@ -48,19 +58,32 @@ public class RepositoryCacheEntry {
         return mimeType;
     }
 
-    public String getObjectPath() {
+    public String getCacheObjectPath() {
         return cacheObjectPath;
     }
 
-    public UUID getObjectId() {
+    public UUID getCacheObjectId() {
         return cacheObjectId;
+    }
+
+    public boolean isCached() {
+        return isCached;
+    }
+
+    public Timestamp getInsertedAt() {
+        return insertedAt;
+    }
+
+    public Timestamp getUpdatedAt() {
+        return updatedAt;
     }
 
     @Override
     public String toString() {
         return "RepositoryCacheEntry [repositoryType=" + repositoryType + ", repositoryName=" + repositoryName
                 + ", urlPath=" + urlPath + ", urlParams=" + urlParams + ", mimeType=" + mimeType + ", cacheObjectPath="
-                + cacheObjectPath + ", cacheObjectId=" + cacheObjectId + "]";
+                + cacheObjectPath + ", cacheObjectId=" + cacheObjectId + ", isCached=" + isCached + ", insertedAt="
+                + insertedAt + ", updatedAt=" + updatedAt + "]";
     }
 
 }

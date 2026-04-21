@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -31,27 +30,28 @@ import us.weeksconsulting.dependencyproxy.config.service.FileService;
 @Component
 public class CacheManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheManager.class);
-    private final ApplicationConfig applicationConfig;
+    private final ApplicationConfig appConfig;
 
     private final RepositoryCacheEntryDao repoDao;
     private final FileService fileService;
 
-    public CacheManager(ApplicationConfig applicationConfig, RepositoryCacheEntryDao repoDao, FileService fileService) {
-        this.applicationConfig = applicationConfig;
+    public CacheManager(ApplicationConfig appConfig, RepositoryCacheEntryDao repoDao, FileService fileService) {
+        this.appConfig = appConfig;
         this.repoDao = repoDao;
         this.fileService = fileService;
     }
 
-    @Transactional
-    public ResponseEntity<StreamingResponseBody> getOrCache(String repositoryType, String repositoryName,
+    public ResponseEntity<StreamingResponseBody> getOrCache(
+            String repositoryType,
+            String repositoryName,
             String urlPath,
             Map<String, String> urlParams) throws IOException {
 
-        Repository repo = applicationConfig.getRepositories().get(repositoryType).get(repositoryName);
+        Repository repo = appConfig.getRepositories().get(repositoryType).get(repositoryName);
 
         LOGGER.trace("repo: {}", repo);
 
-        RepositoryCacheEntry existingRepositoryCacheEntry = repoDao.getRepositoryCacheEntry(
+        final RepositoryCacheEntry existingRepositoryCacheEntry = repoDao.getCacheEntry(
                 repositoryType,
                 repositoryName,
                 urlPath,
@@ -59,7 +59,7 @@ public class CacheManager {
 
         LOGGER.trace("repositoryCacheEntry: {}", existingRepositoryCacheEntry);
 
-        if (existingRepositoryCacheEntry == null) {
+        if (existingRepositoryCacheEntry == null || !existingRepositoryCacheEntry.isCached()) {
             LOGGER.trace("Cache Entry Not Found - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
                     repositoryType, repositoryName, urlPath, urlParams);
             String url = repo.getBaseUrl() + urlPath;
@@ -74,20 +74,32 @@ public class CacheManager {
                     mimeType = response.getHeaders().get(CONTENT_TYPE).getFirst();
                 }
 
-                RepositoryCacheEntry newRepositoryCacheEntry = repoDao.putRepositoryCacheEntry(repositoryType,
-                        repositoryName, urlPath,
-                        urlParams, mimeType);
+                RepositoryCacheEntry repositoryCacheEntry;
+
+                if (existingRepositoryCacheEntry == null) {
+                    repositoryCacheEntry = repoDao.insertCacheEntry(
+                            repositoryType,
+                            repositoryName,
+                            urlPath,
+                            urlParams,
+                            mimeType);
+                } else {
+                    repositoryCacheEntry = existingRepositoryCacheEntry;
+                }
 
                 HttpHeaders responseHeaders = new HttpHeaders();
 
-                if (newRepositoryCacheEntry.getMimeType() != null) {
+                if (repositoryCacheEntry.getMimeType() != null) {
                     responseHeaders.add(CONTENT_TYPE, mimeType);
                 }
 
+                LOGGER.trace("Calling getOrCache");
                 InputStream inputStream = getOrCache(
                         response.getBody(),
-                        newRepositoryCacheEntry.getObjectPath(),
-                        newRepositoryCacheEntry.getObjectId());
+                        repositoryCacheEntry.getCacheObjectPath(),
+                        repositoryCacheEntry.getCacheObjectId(),
+                        false);
+                LOGGER.trace("Returning ResponseEntity");
                 return ResponseEntity.ok()
                         .headers(responseHeaders)
                         .body(outputStream -> inputStream.transferTo(outputStream));
@@ -99,65 +111,60 @@ public class CacheManager {
             responseHeaders.add(CONTENT_TYPE, existingRepositoryCacheEntry.getMimeType());
             InputStream inputStream = getOrCache(
                     null,
-                    existingRepositoryCacheEntry.getObjectPath(),
-                    existingRepositoryCacheEntry.getObjectId());
+                    existingRepositoryCacheEntry.getCacheObjectPath(),
+                    existingRepositoryCacheEntry.getCacheObjectId(),
+                    true);
             return ResponseEntity.ok()
                     .headers(responseHeaders)
                     .body(outputStream -> inputStream.transferTo(outputStream));
         }
     }
 
-    private InputStream getOrCache(InputStream inputStream, String objectPath, UUID objectId) throws IOException {
-        String cacheType = applicationConfig.getStorage().getType();
+    private InputStream getOrCache(
+            InputStream inputStream,
+            String cacheObjectPath,
+            UUID cacheObjectId,
+            boolean isCached) throws IOException {
+        String cacheType = appConfig.getStorage().getType();
 
         switch (cacheType) {
             case "local":
-                return getOrCacheLocal(inputStream, objectPath, objectId);
+                return getOrCacheLocal(inputStream, cacheObjectPath, cacheObjectId, isCached);
             case "s3":
-                return getOrCacheS3(inputStream, objectPath, objectId);
+                return getOrCacheS3(inputStream, cacheObjectPath, cacheObjectId, isCached);
             default:
                 return null;
         }
     }
 
-    private InputStream getOrCacheLocal(InputStream inputStream, String objectPath, UUID objectId) throws IOException {
-        String storageLocation = applicationConfig.getStorage().getLocation();
+    private InputStream getOrCacheLocal(InputStream inputStream, String cacheObjectPath, UUID cacheObjectId,
+            boolean isCached)
+            throws IOException {
 
-        LOGGER.trace("storageLocation: {}", storageLocation);
-
-        File cacheDirectory = new File(applicationConfig.getStorage().getLocation() + objectPath);
+        File cacheDirectory = new File(appConfig.getStorage().getLocation() + cacheObjectPath);
+        File cacheFile = new File(cacheDirectory.getPath() + File.separator + cacheObjectId);
 
         LOGGER.trace("cacheDirectory: {}", cacheDirectory.getPath());
-
-        if (!cacheDirectory.exists()) {
-            LOGGER.trace("cacheDirectory does not exist creating ...");
-            cacheDirectory.mkdirs();
-        }
-
-        File cacheFile = new File(cacheDirectory.getPath() + File.separator + String.valueOf(objectId));
-
         LOGGER.trace("cacheFile: {}", cacheFile.getPath());
 
-        LOGGER.trace("cacheFile length: {}", cacheFile.length());
-        if (!cacheFile.exists()) {
-            LOGGER.trace("cacheFile does not exist creating ...");
-
+        if (!isCached) {
             PipedInputStream pipedInputStream = new PipedInputStream();
             PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
             TeeInputStream teeInputStream = new TeeInputStream(inputStream, pipedOutputStream);
 
-            fileService.writeFileAsync(teeInputStream, pipedOutputStream, cacheFile);
+            fileService.writeFileAsync(pipedInputStream, pipedOutputStream, cacheObjectId, cacheDirectory, cacheFile);
 
-            LOGGER.trace("returning pipedInputStream");
-            return pipedInputStream;
+            LOGGER.trace("Returning teeInputStream");
+            return teeInputStream;
         } else {
             LOGGER.trace("cacheFile length: {}", cacheFile.length());
-            LOGGER.trace("Returning cacheFile: {}", cacheFile.getAbsolutePath());
+            LOGGER.trace("Returning cacheFile from {}", cacheFile.getAbsolutePath());
             return new FileInputStream(cacheFile);
         }
     }
 
-    private InputStream getOrCacheS3(InputStream inputStream, String objectPath, UUID objectId) {
+    private InputStream getOrCacheS3(InputStream inputStream, String cacheObjectPath, UUID cacheObjectId,
+            boolean isCached) {
         return null;
     }
 }
