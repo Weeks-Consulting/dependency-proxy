@@ -77,12 +77,21 @@ public class CacheManager {
                 RepositoryCacheEntry repositoryCacheEntry;
 
                 if (existingRepositoryCacheEntry == null) {
+                    // During concurrency it's possible another thread has 
+                    // already added a record and potentially cached the data.
+                    // Even though it's already been cached we will pull it again.
+                    // TODO - Refactor to eliminate the double pull.
                     repositoryCacheEntry = repoDao.insertCacheEntry(
                             repositoryType,
                             repositoryName,
                             urlPath,
                             urlParams,
-                            mimeType);
+                            mimeType).orElse(
+                                    repoDao.getCacheEntry(
+                                            repositoryType,
+                                            repositoryName,
+                                            urlPath,
+                                            urlParams));
                 } else {
                     repositoryCacheEntry = existingRepositoryCacheEntry;
                 }
@@ -150,12 +159,12 @@ public class CacheManager {
         if (!isCached) {
             PipedInputStream pipedInputStream = new PipedInputStream();
             PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
-            TeeInputStream teeInputStream = new TeeInputStream(inputStream, pipedOutputStream);
+            TeeInputStream teeInputStream = new TeeInputStream(inputStream, pipedOutputStream, true);
 
-            fileService.writeFileAsync(pipedInputStream, pipedOutputStream, cacheObjectId, cacheDirectory, cacheFile);
+            fileService.writeFileAsync(teeInputStream, pipedOutputStream, cacheObjectId, cacheDirectory, cacheFile);
 
-            LOGGER.trace("Returning teeInputStream");
-            return teeInputStream;
+            LOGGER.trace("Returning pipedInputStream");
+            return pipedInputStream;
         } else {
             LOGGER.trace("cacheFile length: {}", cacheFile.length());
             LOGGER.trace("Returning cacheFile from {}", cacheFile.getAbsolutePath());

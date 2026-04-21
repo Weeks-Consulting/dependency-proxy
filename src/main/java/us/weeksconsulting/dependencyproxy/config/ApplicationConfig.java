@@ -17,7 +17,7 @@ public class ApplicationConfig {
     private final Map<String, Map<String, Repository>> repositories;
 
     public ApplicationConfig(Storage storage, Map<String, Map<String, Repository>> repositories) {
-        LOGGER.trace("Constructed RespositoryConfigs: {}", repositories);
+        LOGGER.trace("Constructed RepositoryConfigs: {}", repositories);
         this.storage = storage;
         this.repositories = repositories;
     }

@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -47,8 +48,9 @@ public class FileService {
 
         if (repoEntry == null) {
             LOGGER.warn("Unable to get row lock. Assuming another thread is already caching this data");
-            // inputStream.close();
-            // outputStream.close();
+            IOUtils.consume(inputStream);
+            inputStream.close();
+            outputStream.close();
         } else {
             if (!cacheDirectory.exists()) {
                 LOGGER.trace("cacheDirectory does not exist creating ...");
@@ -60,7 +62,7 @@ public class FileService {
                 cacheFile.createNewFile();
                 Files.copy(inputStream, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             } finally {
-                // inputStream.close();
+                inputStream.close();
                 outputStream.close();
             }
 

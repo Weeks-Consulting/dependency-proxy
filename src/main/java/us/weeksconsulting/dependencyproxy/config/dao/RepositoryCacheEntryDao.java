@@ -5,6 +5,7 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import javax.sql.DataSource;
@@ -78,7 +79,7 @@ public class RepositoryCacheEntryDao {
                 .optional().orElse(null);
     }
 
-    public RepositoryCacheEntry insertCacheEntry(
+    public Optional<RepositoryCacheEntry> insertCacheEntry(
             String repositoryType,
             String repositoryName,
             String urlPath,
@@ -112,7 +113,8 @@ public class RepositoryCacheEntryDao {
                                 :inserted_at,
                                 :updated_at
                                 )
-                        returning *                        
+                        on conflict do nothing
+                        returning *
                         """)
                 .param("repository_type", repositoryType)
                 .param("repository_name", repositoryName)
@@ -125,7 +127,7 @@ public class RepositoryCacheEntryDao {
                 .param("inserted_at", Timestamp.from(Instant.now()))
                 .param("updated_at", Timestamp.from(Instant.now()))
                 .query(RepositoryCacheEntry.class)
-                .single();
+                .optional();
 
     }
 
