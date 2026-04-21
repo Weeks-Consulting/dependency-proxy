@@ -6,13 +6,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.commons.io.input.TeeInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -142,9 +139,10 @@ public class CacheManager {
         LOGGER.trace("cacheFile: {}", cacheFile.getPath());
 
         if (!isCached) {
+            LOGGER.trace("isCached: {}", isCached);
             fileService.writeFileAsync(inputStream, cacheObjectId, cacheDirectory, cacheFile);
 
-            LOGGER.trace("Returning pipedInputStream");
+            LOGGER.trace("Returning null InputStream");
             return null;
         } else {
             LOGGER.trace("cacheFile length: {}", cacheFile.length());
