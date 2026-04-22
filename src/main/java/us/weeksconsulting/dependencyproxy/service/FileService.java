@@ -19,6 +19,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.awspring.cloud.s3.S3Template;
 import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
 import us.weeksconsulting.dependencyproxy.config.model.Storage;
 import us.weeksconsulting.dependencyproxy.dao.RepositoryCacheEntryDao;
@@ -28,12 +29,14 @@ import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
 public class FileService {
   private static final Logger LOGGER = LoggerFactory.getLogger(FileService.class);
 
+  private final S3Template s3Template;
   private final RepositoryCacheEntryDao repoDao;
   private final Storage storage;
 
-  public FileService(RepositoryCacheEntryDao repoDao, ApplicationConfig appConfig) {
+  public FileService(RepositoryCacheEntryDao repoDao, ApplicationConfig appConfig, S3Template s3Template) {
     this.repoDao = repoDao;
     this.storage = appConfig.getStorage();
+    this.s3Template = s3Template;
   }
 
   @Async
@@ -55,39 +58,107 @@ public class FileService {
     RepositoryCacheEntry repoEntry = repoDao.getCacheEntryForUpdate(cacheObjectId);
     LOGGER.trace("repoEntry: {}", repoEntry);
 
-    if (repoEntry == null) {
-      LOGGER.debug("Unable to get row lock. Assuming another thread is already caching this data");
-      IOUtils.consume(inputStream);
-      outputStream.close();
-    } else {
-      LOGGER.trace("Acquired row lock. Caching Data to file storage");
-      cacheDirectory.mkdirs();
-      LOGGER.trace("cacheFile length: {}", cacheFile.length());
+    try {
 
-      try {
-        MessageDigest fileHash;
-        fileHash = MessageDigest.getInstance("SHA-256");
-        DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
-
-        cacheFile.createNewFile();
-        Files.copy(digestInputStream, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
+      if (repoEntry == null) {
+        LOGGER.debug("Unable to get row lock. Assuming another thread is already caching this data");
+        IOUtils.consume(inputStream);
+        outputStream.close();
+      } else {
+        LOGGER.trace("Acquired row lock. Caching Data to file storage");
+        cacheDirectory.mkdirs();
         LOGGER.trace("cacheFile length: {}", cacheFile.length());
 
-        String cacheFileHash = Hex.encodeHexString(fileHash.digest());
+        try {
+          MessageDigest fileHash;
+          fileHash = MessageDigest.getInstance("SHA-256");
+          DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
 
-        LOGGER.trace("cacheFileHash: {}", cacheFileHash);
+          cacheFile.createNewFile();
+          Files.copy(digestInputStream, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-        repoDao.updateCacheEntry(cacheObjectId, cacheFileHash, true);
-      } catch (NoSuchAlgorithmException e) {
-        LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
-        throw new RuntimeException(e);
-      } finally {
-        outputStream.close();
+          LOGGER.trace("cacheFile length: {}", cacheFile.length());
+
+          String cacheFileHash = Hex.encodeHexString(fileHash.digest());
+
+          LOGGER.trace("cacheFileHash: {}", cacheFileHash);
+
+          repoDao.updateCacheEntry(cacheObjectId, cacheFileHash, true);
+        } catch (NoSuchAlgorithmException e) {
+          LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
+          throw new RuntimeException(e);
+        } finally {
+          outputStream.close();
+        }
+
       }
-
+    } catch (IOException ex) {
+      if (ex.getMessage() == "Read end dead") {
+        LOGGER.warn("Client Download Interrupted - Skipping Cache Download");
+      } else {
+        throw ex;
+      }
     }
 
     LOGGER.trace("writeFileAsync finished");
+  }
+
+  @Async
+  public void writeS3Async(InputStream inputStream,
+      OutputStream outputStream,
+      UUID cacheObjectId,
+      String s3ObjectKey) throws IOException {
+
+    LOGGER.trace("writeS3Async started");
+    LOGGER.trace("cacheObjectId: {}", cacheObjectId);
+    LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
+
+    String bucket = storage.getLocation();
+    LOGGER.trace("bucket: {}", bucket);
+
+    RepositoryCacheEntry repoEntry = repoDao.getCacheEntryForUpdate(cacheObjectId);
+    LOGGER.trace("repoEntry: {}", repoEntry);
+
+    try {
+
+      if (repoEntry == null) {
+        LOGGER.debug("Unable to get row lock. Assuming another thread is already caching this data");
+        IOUtils.consume(inputStream);
+        outputStream.close();
+      } else {
+        LOGGER.trace("Acquired row lock. Caching Data to file storage");
+        // LOGGER.trace("cacheFile length: {}", cacheFile.length());
+
+        try {
+          MessageDigest fileHash;
+          fileHash = MessageDigest.getInstance("SHA-256");
+          DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
+
+          s3Template.upload(bucket, s3ObjectKey, digestInputStream);
+
+          // LOGGER.trace("cacheFile length: {}", cacheFile.length());
+
+          String cacheFileHash = Hex.encodeHexString(fileHash.digest());
+
+          LOGGER.trace("cacheFileHash: {}", cacheFileHash);
+
+          repoDao.updateCacheEntry(cacheObjectId, cacheFileHash, true);
+        } catch (NoSuchAlgorithmException e) {
+          LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
+          throw new RuntimeException(e);
+        } finally {
+          outputStream.close();
+        }
+
+      }
+    } catch (IOException ex) {
+      if (ex.getMessage() == "Read end dead") {
+        LOGGER.warn("Client Download Interrupted - Skipping Cache Download");
+      } else {
+        throw ex;
+      }
+    }
+
+    LOGGER.trace("writeS3Async finished");
   }
 }

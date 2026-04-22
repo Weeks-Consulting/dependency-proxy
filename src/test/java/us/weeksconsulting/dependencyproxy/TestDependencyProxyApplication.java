@@ -5,7 +5,11 @@ import org.springframework.boot.SpringApplication;
 public class TestDependencyProxyApplication {
 
   public static void main(String[] args) {
-    SpringApplication.from(DependencyProxyApplication::main).with(TestcontainersConfiguration.class).run(args);
+    SpringApplication
+        .from(DependencyProxyApplication::main)
+        .with(TestcontainersConfiguration.class)
+        .withAdditionalProfiles("test")
+        .run(args);
   }
 
 }

@@ -1,6 +1,11 @@
 spring:
   application:
     name: dependency-proxy
+  cloud:
+    aws:
+      s3:
+        region: us-east-1
+
   mvc:
     async:
       request-timeout: 300000

@@ -3,18 +3,24 @@ spring:
     # Get rid of annoying error on shutdown.
     exclude: org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
 
+server:
+  shutdown: immediate  
+
 logging:
   file:
     name: spring-boot.log
   level:
-    org.springframework: INFO
+    # org.springframework: INFO
     # org.springframework.jdbc: TRACE
+    io.awspring.cloud: TRACE
     us.weeksconsulting: TRACE
 
 application:
   storage:
-    type: local
-    location: ./storage
+    # type: local
+    # location: ./storage
+    type: s3
+    location: test-bucket
   repositories:
     raw:
       apache:

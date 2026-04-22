@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import io.awspring.cloud.s3.S3Resource;
+import io.awspring.cloud.s3.S3Template;
 import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
 import us.weeksconsulting.dependencyproxy.config.model.Repository;
 import us.weeksconsulting.dependencyproxy.config.model.Storage;
@@ -34,6 +36,8 @@ public class CacheManager {
 
   // private final ApplicationConfig appConfig;
 
+  private final S3Template s3Template;
+
   private final RepositoryCacheEntryDao repoDao;
   private final FileService fileService;
 
@@ -42,8 +46,10 @@ public class CacheManager {
 
   public CacheManager(
       ApplicationConfig appConfig,
+      S3Template s3Template,
       RepositoryCacheEntryDao repoDao,
       FileService fileService) {
+    this.s3Template = s3Template;
     this.repositories = appConfig.getRepositories();
     this.storage = appConfig.getStorage();
 
@@ -170,7 +176,7 @@ public class CacheManager {
 
     LOGGER.trace("isCached: {}", isCached);
     if (!isCached) {
-      PipedInputStream pipedInputStream = new PipedInputStream();
+      PipedInputStream pipedInputStream = new PipedInputStream(1048576);
       PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
       TeeInputStream teeInputStream = new TeeInputStream(inputStream, pipedOutputStream);
       fileService.writeFileAsync(teeInputStream, pipedOutputStream, cacheObjectId, cacheDirectory, cacheFile);
@@ -184,8 +190,40 @@ public class CacheManager {
     }
   }
 
-  private InputStream getOrCacheS3(InputStream inputStream, String cacheObjectPath,
-      UUID cacheObjectId, boolean isCached) {
-    throw new UnsupportedOperationException("S3 Support Not Implemented");
+  private InputStream getOrCacheS3(
+      InputStream inputStream,
+      String cacheObjectPath,
+      UUID cacheObjectId,
+      boolean isCached) throws IOException {
+
+    LOGGER.trace(
+        "getOrCacheS3 - cacheObjectPath: {}, cacheObjectId: {}, isCached: {}",
+        cacheObjectPath,
+        cacheObjectId,
+        isCached);
+
+    String bucket = storage.getLocation();
+    String s3ObjectKey = cacheObjectPath.substring(1) + "/" + cacheObjectId;
+    LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
+
+    LOGGER.trace("isCached: {}", isCached);
+    if (!isCached) {
+      PipedInputStream pipedInputStream = new PipedInputStream(1048576);
+      PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
+      TeeInputStream teeInputStream = new TeeInputStream(inputStream, pipedOutputStream);
+      fileService.writeS3Async(teeInputStream, pipedOutputStream, cacheObjectId, s3ObjectKey);
+
+      LOGGER.trace("Returning cacheFile from pipedInputStream");
+      return pipedInputStream;
+    } else {
+      S3Resource s3Resource = s3Template.download(bucket, s3ObjectKey);
+      LOGGER.trace("cacheFile length: {}", s3Resource.contentLength());
+
+      String s3Path = "s3://" + s3Resource.getLocation().getBucket() + "/" + s3Resource.getLocation().getObject();
+      LOGGER.trace("Returning cacheFile from {}", s3Path);
+
+      LOGGER.trace("s3Resource: {}", s3Resource);
+      return s3Resource.getInputStream();
+    }
   }
 }
