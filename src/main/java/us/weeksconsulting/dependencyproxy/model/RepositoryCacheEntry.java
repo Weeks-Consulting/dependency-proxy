@@ -11,6 +11,7 @@ public class RepositoryCacheEntry {
   private final String mimeType;
   private final String cacheObjectPath;
   private final UUID cacheObjectId;
+  private final Long cacheObjectSize;
   private final String cacheObjectHash;
   private final boolean isCached;
   private final Timestamp insertedAt;
@@ -24,6 +25,7 @@ public class RepositoryCacheEntry {
       String mimeType,
       String cacheObjectPath,
       UUID cacheObjectId,
+      Long cacheObjectSize,
       String cacheObjectHash,
       boolean isCached,
       Timestamp insertedAt,
@@ -35,6 +37,7 @@ public class RepositoryCacheEntry {
     this.mimeType = mimeType;
     this.cacheObjectPath = cacheObjectPath;
     this.cacheObjectId = cacheObjectId;
+    this.cacheObjectSize = cacheObjectSize;
     this.cacheObjectHash = cacheObjectHash;
     this.isCached = isCached;
     this.insertedAt = insertedAt;
@@ -69,6 +72,10 @@ public class RepositoryCacheEntry {
     return cacheObjectId;
   }
 
+  public Long getCacheObjectSize() {
+    return cacheObjectSize;
+  }
+
   public String getCacheObjectHash() {
     return cacheObjectHash;
   }
@@ -89,8 +96,9 @@ public class RepositoryCacheEntry {
   public String toString() {
     return "RepositoryCacheEntry [repositoryType=" + repositoryType + ", repositoryName=" + repositoryName
         + ", urlPath=" + urlPath + ", urlParams=" + urlParams + ", mimeType=" + mimeType + ", cacheObjectPath="
-        + cacheObjectPath + ", cacheObjectId=" + cacheObjectId + ", cacheObjectHash=" + cacheObjectHash + ", isCached="
-        + isCached + ", insertedAt=" + insertedAt + ", updatedAt=" + updatedAt + "]";
+        + cacheObjectPath + ", cacheObjectId=" + cacheObjectId + ", cacheObjectSize=" + cacheObjectSize
+        + ", cacheObjectHash=" + cacheObjectHash + ", isCached=" + isCached + ", insertedAt=" + insertedAt
+        + ", updatedAt=" + updatedAt + "]";
   }
 
 }

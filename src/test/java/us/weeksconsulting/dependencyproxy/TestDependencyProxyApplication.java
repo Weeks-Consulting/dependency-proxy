@@ -8,7 +8,6 @@ public class TestDependencyProxyApplication {
     SpringApplication
         .from(DependencyProxyApplication::main)
         .with(TestcontainersConfiguration.class)
-        .withAdditionalProfiles("test")
         .run(args);
   }
 

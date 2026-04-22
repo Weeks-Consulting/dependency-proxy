@@ -3,6 +3,7 @@ package us.weeksconsulting.dependencyproxy;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -28,8 +29,10 @@ class TestcontainersConfiguration {
   }
 
   @Bean
+  @Profile("s3")
   S3MockContainer s3MockContainer() {
     S3MockContainer s3Container = new S3MockContainer("5.0.0");
+    // For some reason this doesn't work
     // s3Container.withInitialBuckets("test-bucket");
     s3Container.withEnv("COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS","test-bucket");
     s3Container.withEnv("SPRING_PROFILES_ACTIVE","debug");
@@ -37,9 +40,9 @@ class TestcontainersConfiguration {
   }
 
   @Bean
+  @Profile("s3")
   DynamicPropertyRegistrar s3PropertiesRegistrar(S3MockContainer s3MockContainer) {
     return registry -> {
-      // registry.add("spring.cloud.aws.s3.region", () -> "us-east-1");
       registry.add("spring.cloud.aws.s3.endpoint", s3MockContainer::getHttpEndpoint);
       registry.add("spring.cloud.aws.s3.path-style-access-enabled", () -> "true");
       registry.add("spring.cloud.aws.credentials.access-key", () -> "foo");

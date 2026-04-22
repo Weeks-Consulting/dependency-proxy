@@ -19,6 +19,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.awspring.cloud.s3.S3Exception;
+import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
 import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
 import us.weeksconsulting.dependencyproxy.config.model.Storage;
@@ -70,6 +72,7 @@ public class FileService {
         LOGGER.trace("cacheFile length: {}", cacheFile.length());
 
         try {
+
           MessageDigest fileHash;
           fileHash = MessageDigest.getInstance("SHA-256");
           DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
@@ -83,7 +86,7 @@ public class FileService {
 
           LOGGER.trace("cacheFileHash: {}", cacheFileHash);
 
-          repoDao.updateCacheEntry(cacheObjectId, cacheFileHash, true);
+          repoDao.updateCacheEntry(cacheObjectId, cacheFile.length(), cacheFileHash, true);
         } catch (NoSuchAlgorithmException e) {
           LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
           throw new RuntimeException(e);
@@ -93,9 +96,14 @@ public class FileService {
 
       }
     } catch (IOException ex) {
-      if (ex.getMessage() == "Read end dead") {
-        LOGGER.warn("Client Download Interrupted - Skipping Cache Download");
+      // If the incoming piped input stream get's closed prematurely assume the
+      // client disconnected mid download and abandon the caching operation
+      // and attempt to cleanup
+      if (ex.getMessage().contains("Read end dead")) {
+        LOGGER.warn("Client Download Interrupted - Skipping Cache Download and Attempting Cleanup");
+        cacheFile.delete();
       } else {
+        LOGGER.error("{}", ex);
         throw ex;
       }
     }
@@ -119,43 +127,44 @@ public class FileService {
     RepositoryCacheEntry repoEntry = repoDao.getCacheEntryForUpdate(cacheObjectId);
     LOGGER.trace("repoEntry: {}", repoEntry);
 
-    try {
+    if (repoEntry == null) {
+      LOGGER.debug("Unable to get row lock. Assuming another thread is already caching this data");
+      IOUtils.consume(inputStream);
+      outputStream.close();
+    } else {
+      LOGGER.trace("Acquired row lock. Caching Data to file storage");
+      // LOGGER.trace("cacheFile length: {}", cacheFile.length());
 
-      if (repoEntry == null) {
-        LOGGER.debug("Unable to get row lock. Assuming another thread is already caching this data");
-        IOUtils.consume(inputStream);
-        outputStream.close();
-      } else {
-        LOGGER.trace("Acquired row lock. Caching Data to file storage");
-        // LOGGER.trace("cacheFile length: {}", cacheFile.length());
+      try {
+        MessageDigest fileHash;
+        fileHash = MessageDigest.getInstance("SHA-256");
+        DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
 
-        try {
-          MessageDigest fileHash;
-          fileHash = MessageDigest.getInstance("SHA-256");
-          DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
+        S3Resource s3Resource = s3Template.upload(bucket, s3ObjectKey, digestInputStream);
 
-          s3Template.upload(bucket, s3ObjectKey, digestInputStream);
+        LOGGER.trace("cacheFile length: {}", s3Resource.contentLength());
 
-          // LOGGER.trace("cacheFile length: {}", cacheFile.length());
+        String cacheFileHash = Hex.encodeHexString(fileHash.digest());
 
-          String cacheFileHash = Hex.encodeHexString(fileHash.digest());
+        LOGGER.trace("cacheFileHash: {}", cacheFileHash);
 
-          LOGGER.trace("cacheFileHash: {}", cacheFileHash);
-
-          repoDao.updateCacheEntry(cacheObjectId, cacheFileHash, true);
-        } catch (NoSuchAlgorithmException e) {
-          LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
-          throw new RuntimeException(e);
-        } finally {
-          outputStream.close();
+        repoDao.updateCacheEntry(cacheObjectId, s3Resource.contentLength(), cacheFileHash, true);
+      } catch (NoSuchAlgorithmException e) {
+        LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
+        throw new RuntimeException(e);
+      } catch (S3Exception ex) {
+        // If the incoming piped input stream get's closed prematurely assume the
+        // client disconnected mid download and abandon the caching operation
+        // and attempt to cleanup
+        if (ex.getCause().getMessage().contains("Read end dead")) {
+          LOGGER.warn("Client Download Interrupted - Skipping Cache Download and Attempting Cleanup");
+          s3Template.deleteObject(bucket, s3ObjectKey);
+        } else {
+          LOGGER.error("{}", ex);
+          throw ex;
         }
-
-      }
-    } catch (IOException ex) {
-      if (ex.getMessage() == "Read end dead") {
-        LOGGER.warn("Client Download Interrupted - Skipping Cache Download");
-      } else {
-        throw ex;
+      } finally {
+        outputStream.close();
       }
     }
 

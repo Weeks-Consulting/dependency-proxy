@@ -119,7 +119,6 @@ public class RepositoryCacheEntryDao {
                 mime_type,
                 cache_object_path,
                 cache_object_id,
-                cache_object_hash,
                 is_cached,
                 inserted_at,
                 updated_at
@@ -132,7 +131,6 @@ public class RepositoryCacheEntryDao {
               :mime_type,
               :cache_object_path,
               :cache_object_id,
-              :cache_object_hash,
               :is_cached,
               :inserted_at,
               :updated_at
@@ -147,7 +145,6 @@ public class RepositoryCacheEntryDao {
         .param("mime_type", mime_type)
         .param("cache_object_path", objectFilepath)
         .param("cache_object_id", cacheObjectId)
-        .param("cache_object_hash", null)
         .param("is_cached", false)
         .param("inserted_at", now)
         .param("updated_at", now)
@@ -159,12 +156,14 @@ public class RepositoryCacheEntryDao {
 
   public void updateCacheEntry(
       UUID cacheObjectId,
+      Long cacheObjectSize,
       String cacheObjectHash,
       boolean isCached) {
 
     LOGGER.trace(
-        "updateCacheEntry - cacheObjectId: {}, cacheObjectHash: {}, isCached: {}",
+        "updateCacheEntry - cacheObjectId: {}, cacheObjectHash: {}, cacheObjectHash: {}, isCached: {}",
         cacheObjectId,
+        cacheObjectHash,
         cacheObjectHash,
         isCached);
 
@@ -173,12 +172,14 @@ public class RepositoryCacheEntryDao {
     this.jdbcClient
         .sql("""
             update repository_cache
-              set cache_object_hash = :cache_object_hash,
+              set cache_object_size = :cache_object_size,
+                  cache_object_hash = :cache_object_hash,
                   is_cached = :is_cached,
-                  updated_at = updated_at
+                  updated_at = :updated_at
               where cache_object_id = :cache_object_id
             """)
         .param("cache_object_id", cacheObjectId)
+        .param("cache_object_size", cacheObjectSize)
         .param("cache_object_hash", cacheObjectHash)
         .param("is_cached", isCached)
         .param("updated_at", now)

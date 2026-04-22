@@ -4,7 +4,7 @@ spring:
     exclude: org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
 
 server:
-  shutdown: immediate  
+  shutdown: immediate
 
 logging:
   file:
@@ -16,11 +16,6 @@ logging:
     us.weeksconsulting: TRACE
 
 application:
-  storage:
-    # type: local
-    # location: ./storage
-    type: s3
-    location: test-bucket
   repositories:
     raw:
       apache:
@@ -32,3 +27,25 @@ application:
       debian:
         base_url: http://deb.debian.org
         cache_ttl: 30d
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+application:
+  storage:
+    type: local
+    location: ./storage
+
+---
+spring:
+  config:
+    activate:
+      on-profile: s3
+
+application:
+  storage:
+    type: s3
+    location: test-bucket
