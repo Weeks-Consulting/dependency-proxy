@@ -30,6 +30,13 @@ public class RepositoryCacheEntryDao {
       String urlPath,
       Map<String, String> urlParams) {
 
+    LOGGER.trace(
+        "getCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
+        repositoryType,
+        repositoryName,
+        urlPath,
+        urlParams);
+
     String serializedUrlParams = serializeUrlParams(urlParams);
 
     return this.jdbcClient
@@ -52,6 +59,8 @@ public class RepositoryCacheEntryDao {
 
   public RepositoryCacheEntry getCacheEntry(UUID cacheObjectId) {
 
+    LOGGER.trace("getCacheEntry - cacheObjectId: {}", cacheObjectId);
+
     return this.jdbcClient
         .sql("""
             select *
@@ -65,6 +74,8 @@ public class RepositoryCacheEntryDao {
 
   public RepositoryCacheEntry getCacheEntryForUpdate(UUID cacheObjectId) {
 
+    LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
+
     return this.jdbcClient
         .sql("""
             select *
@@ -77,8 +88,20 @@ public class RepositoryCacheEntryDao {
         .optional().orElse(null);
   }
 
-  public RepositoryCacheEntry insertGetCacheEntry(String repositoryType, String repositoryName,
-      String urlPath, Map<String, String> urlParams, String mime_type) {
+  public RepositoryCacheEntry insertGetCacheEntry(
+      String repositoryType,
+      String repositoryName,
+      String urlPath,
+      Map<String, String> urlParams,
+      String mime_type) {
+
+    LOGGER.trace(
+        "insertGetCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}, mime_type: {}",
+        repositoryType,
+        repositoryName,
+        urlPath,
+        urlParams,
+        mime_type);
 
     String serializedUrlParams = serializeUrlParams(urlParams);
     String objectFilepath = getObjectFilePath(urlPath, serializedUrlParams);
@@ -96,6 +119,7 @@ public class RepositoryCacheEntryDao {
                 mime_type,
                 cache_object_path,
                 cache_object_id,
+                cache_object_hash,
                 is_cached,
                 inserted_at,
                 updated_at
@@ -108,6 +132,7 @@ public class RepositoryCacheEntryDao {
               :mime_type,
               :cache_object_path,
               :cache_object_id,
+              :cache_object_hash,
               :is_cached,
               :inserted_at,
               :updated_at
@@ -122,6 +147,7 @@ public class RepositoryCacheEntryDao {
         .param("mime_type", mime_type)
         .param("cache_object_path", objectFilepath)
         .param("cache_object_id", cacheObjectId)
+        .param("cache_object_hash", null)
         .param("is_cached", false)
         .param("inserted_at", now)
         .param("updated_at", now)
@@ -131,16 +157,31 @@ public class RepositoryCacheEntryDao {
 
   }
 
-  public void updateCacheEntry(UUID cacheObjectId, boolean isCached) {
+  public void updateCacheEntry(
+      UUID cacheObjectId,
+      String cacheObjectHash,
+      boolean isCached) {
+
+    LOGGER.trace(
+        "updateCacheEntry - cacheObjectId: {}, cacheObjectHash: {}, isCached: {}",
+        cacheObjectId,
+        cacheObjectHash,
+        isCached);
+
+    Timestamp now = Timestamp.from(Instant.now());
 
     this.jdbcClient
         .sql("""
             update repository_cache
-              set is_cached = :is_cached
+              set cache_object_hash = :cache_object_hash,
+                  is_cached = :is_cached,
+                  updated_at = updated_at
               where cache_object_id = :cache_object_id
             """)
         .param("cache_object_id", cacheObjectId)
+        .param("cache_object_hash", cacheObjectHash)
         .param("is_cached", isCached)
+        .param("updated_at", now)
         .update();
   }
 

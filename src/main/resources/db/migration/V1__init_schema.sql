@@ -6,6 +6,7 @@ create table repository_cache (
     mime_type text,
     cache_object_path text not null,
     cache_object_id uuid not null,
+    cache_object_hash text,
     is_cached boolean not null,
     inserted_at timestamp not null,
     updated_at timestamp not null,

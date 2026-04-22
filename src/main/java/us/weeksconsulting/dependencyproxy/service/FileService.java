@@ -73,9 +73,11 @@ public class FileService {
 
         LOGGER.trace("cacheFile length: {}", cacheFile.length());
 
-        LOGGER.trace("cacheFileHash: {}", Hex.encodeHexString(fileHash.digest()));
+        String cacheFileHash = Hex.encodeHexString(fileHash.digest());
 
-        repoDao.updateCacheEntry(cacheObjectId, true);
+        LOGGER.trace("cacheFileHash: {}", cacheFileHash);
+
+        repoDao.updateCacheEntry(cacheObjectId, cacheFileHash, true);
       } catch (NoSuchAlgorithmException e) {
         LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
         throw new RuntimeException(e);
