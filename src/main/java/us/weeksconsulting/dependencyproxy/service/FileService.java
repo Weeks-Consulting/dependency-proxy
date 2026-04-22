@@ -56,10 +56,11 @@ public class FileService {
     LOGGER.trace("repoEntry: {}", repoEntry);
 
     if (repoEntry == null) {
-      LOGGER.warn("Unable to get row lock. Assuming another thread is already caching this data");
+      LOGGER.debug("Unable to get row lock. Assuming another thread is already caching this data");
       IOUtils.consume(inputStream);
       outputStream.close();
     } else {
+      LOGGER.trace("Acquired row lock. Caching Data to file storage");
       cacheDirectory.mkdirs();
       LOGGER.trace("cacheFile length: {}", cacheFile.length());
 
