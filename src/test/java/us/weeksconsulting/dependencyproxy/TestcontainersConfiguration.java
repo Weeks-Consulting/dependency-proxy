@@ -1,7 +1,6 @@
 package us.weeksconsulting.dependencyproxy;
 
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.test.context.DynamicPropertyRegistrar;
@@ -18,7 +17,6 @@ import com.github.dockerjava.api.model.Ports;
 class TestcontainersConfiguration {
 
   @Bean
-  @ServiceConnection
   PostgreSQLContainer postgresContainer() {
     PostgreSQLContainer postgresContainer = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"));
     postgresContainer.withCreateContainerCmdModifier(cmd -> cmd.withHostConfig(
@@ -29,13 +27,22 @@ class TestcontainersConfiguration {
   }
 
   @Bean
+  DynamicPropertyRegistrar postgresPropertiesRegistrar(PostgreSQLContainer postgresContainer) {
+    return registry -> {
+      registry.add("spring.datasource.url", postgresContainer::getJdbcUrl);
+      registry.add("spring.datasource.username", postgresContainer::getUsername);
+      registry.add("spring.datasource.password", postgresContainer::getPassword);
+      registry.add("spring.datasource.configuration.maximum-pool-size", () -> 5);
+    };
+  }
+
+  @Bean
   @Profile("s3")
   S3MockContainer s3MockContainer() {
     S3MockContainer s3Container = new S3MockContainer("5.0.0");
     // For some reason this doesn't work
     // s3Container.withInitialBuckets("test-bucket");
-    s3Container.withEnv("COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS","test-bucket");
-    s3Container.withEnv("SPRING_PROFILES_ACTIVE","debug");
+    s3Container.withEnv("COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS", "test-bucket");
     return s3Container;
   }
 

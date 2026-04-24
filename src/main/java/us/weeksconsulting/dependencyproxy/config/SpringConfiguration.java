@@ -2,6 +2,7 @@ package us.weeksconsulting.dependencyproxy.config;
 
 import java.util.concurrent.Executor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
@@ -26,9 +27,10 @@ public class SpringConfiguration {
   }
 
   @Bean
-  public TomcatServletWebServerFactory tomcatServletWebServerFactory() {
+  public TomcatServletWebServerFactory tomcatServletWebServerFactory(
+      @Value("${spring.mvc.async.request-timeout}") int asyncTimeout) {
     TomcatServletWebServerFactory factory = new TomcatServletWebServerFactory();
-    factory.addConnectorCustomizers(connector -> connector.setAsyncTimeout(3600000)); // Set async timeout to 1 hour
+    factory.addConnectorCustomizers(connector -> connector.setAsyncTimeout(asyncTimeout));
     return factory;
   }
 

@@ -9,10 +9,13 @@ server:
 logging:
   file:
     name: spring-boot.log
+  logback:
+    rollingpolicy:
+      max-history: 0
   level:
-    # org.springframework: INFO
+    # org.springframework: TRACE
     # org.springframework.jdbc: TRACE
-    io.awspring.cloud: TRACE
+    # io.awspring.cloud: TRACE
     us.weeksconsulting: TRACE
 
 application:

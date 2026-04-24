@@ -10,11 +10,15 @@ import javax.sql.DataSource;
 import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aot.hint.MemberCategory;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
 
 @Component
+@RegisterReflection(classes = RepositoryCacheEntry.class, memberCategories = {
+    MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS })
 public class RepositoryCacheEntryDao {
   private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryCacheEntryDao.class);
 

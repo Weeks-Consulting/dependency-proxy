@@ -5,11 +5,22 @@ spring:
     aws:
       s3:
         region: us-east-1
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres/dependencyproxy}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    configuration:
+      maximum-pool-size: ${SPRING_DATASOURCE_POOL_SIZE:20}
 
   mvc:
     async:
-      request-timeout: 300000
+      request-timeout: ${SPRING_MVC_ASYNC_REQUEST_TIMEOUT:300000}
 
 logging:
   level:
     org.springframework: INFO
+
+application:
+  storage:
+    type: ${APPLICATION_STORAGE_TYPE:-local}
+    location: ${APPLICATION_STORAGE_LOCATION:-/data}

@@ -5,6 +5,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import us.weeksconsulting.dependencyproxy.config.model.Repository;
 import us.weeksconsulting.dependencyproxy.config.model.Storage;
@@ -13,7 +14,10 @@ import us.weeksconsulting.dependencyproxy.config.model.Storage;
 public class ApplicationConfig {
   private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationConfig.class);
 
+  @NestedConfigurationProperty
   private final Storage storage;
+
+  @NestedConfigurationProperty
   private final Map<String, Map<String, Repository>> repositories;
 
   public ApplicationConfig(Storage storage, Map<String, Map<String, Repository>> repositories) {

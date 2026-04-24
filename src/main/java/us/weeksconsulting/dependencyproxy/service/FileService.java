@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -47,7 +48,7 @@ public class FileService {
       InputStream inputStream,
       OutputStream outputStream,
       UUID cacheObjectId,
-      File cacheDirectory,
+      Path cacheDirectory,
       File cacheFile) throws IOException {
     LOGGER.trace("writeFileAsync started");
     LOGGER.trace("cacheObjectId: {}", cacheObjectId);
@@ -68,8 +69,7 @@ public class FileService {
         outputStream.close();
       } else {
         LOGGER.trace("Acquired row lock. Caching Data to file storage");
-        cacheDirectory.mkdirs();
-        LOGGER.trace("cacheFile length: {}", cacheFile.length());
+        Files.createDirectories(cacheDirectory);
 
         try {
 

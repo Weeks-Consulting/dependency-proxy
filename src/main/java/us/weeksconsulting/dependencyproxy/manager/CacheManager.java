@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -168,10 +169,10 @@ public class CacheManager {
       UUID cacheObjectId,
       boolean isCached) throws IOException {
 
-    File cacheDirectory = new File(storage.getLocation() + cacheObjectPath);
-    File cacheFile = new File(cacheDirectory.getPath() + File.separator + cacheObjectId);
+    Path cacheDirectory = Path.of(storage.getLocation() + cacheObjectPath);
+    File cacheFile = new File(cacheDirectory + File.separator + cacheObjectId);
 
-    LOGGER.trace("cacheDirectory: {}", cacheDirectory.getPath());
+    LOGGER.trace("cacheDirectory: {}", cacheDirectory);
     LOGGER.trace("cacheFile: {}", cacheFile.getPath());
 
     LOGGER.trace("isCached: {}", isCached);

@@ -1,0 +1,65 @@
+services:
+  init:
+    image: busybox:latest
+    volumes:
+      - cache_data:/data
+    command: chown -R 1002:1002 /data
+
+  postgres:
+    image: postgres:18-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s # Grace period for initial startup
+    ports:
+      - 55433:5432
+    volumes:
+      - db_data:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dependencyproxy}
+      POSTGRES_USER: ${POSTGRES_USER:-dependencyproxy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dependencyproxy}
+
+  dependency-proxy:
+    image: weeksconsulting-us/dependency-proxy:0.0.1-SNAPSHOT
+    ports:
+      - 8080:8080
+    volumes:
+      - cache_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+    environment:
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-dependencyproxy}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dependencyproxy}
+      APPLICATION_STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      APPLICATION_STORAGE_LOCATION: ${STORAGE_LOCATION:-/data}
+      LOGGING_LEVEL_US_WEEKSCONSULTING: TRACE
+      SPRING_APPLICATION_JSON: |
+        {
+          "application": {
+            "repositories": {
+              "raw": {
+                "apache": {  "base_url": "https://dlcdn.apache.org",
+                  "cache_ttl": "30d"
+                },
+                "nodejs": {
+                  "base_url": "https://dist.nodejs.org",
+                  "cache_ttl": "30d"
+                },
+                "debian": {
+                  "base_url": "http://deb.debian.org",
+                  "cache_ttl": "30d"
+                }
+              }
+            }
+          }
+        }
+
+volumes:
+  db_data:
+  cache_data:

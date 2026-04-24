@@ -23,6 +23,20 @@ time curl -v 'http://localhost:8080/raw/apache/nifi/2.9.0/minifi-2.9.0-bin.zip' 
 docker run -it --rm --add-host=host.docker.internal:host-gateway debian bash -c 'sed -i "s~deb.debian.org~host.docker.internal:8080/raw/debian~g" /etc/apt/sources.list.d/debian.sources && time sh -c "apt update && apt dist-upgrade -y && apt install openjdk-25-jdk -y" && exit'
 ```
 
+### Build
+```shell
+# Java Image
+./mvnw clean spring-boot:build-image -DskipTests | tee spring-boot-build.log
+
+# Native Image
+./mvnw clean spring-boot:build-image -Pnative  -DskipTests | tee spring-boot-build.log
+```
+
+### Run in Docker Compose
+```shell
+docker compose up
+```
+
 ### TODO
 * ~~Implement file checksum on successful download to allow file integrity checks~~
 * ~~Store file size in database - not sure on this one yet~~
