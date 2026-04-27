@@ -40,9 +40,8 @@ class TestcontainersConfiguration {
   @Profile("s3")
   S3MockContainer s3MockContainer() {
     S3MockContainer s3Container = new S3MockContainer("5.0.0");
-    // For some reason this doesn't work
-    // s3Container.withInitialBuckets("test-bucket");
     s3Container.withEnv("COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS", "test-bucket");
+    s3Container.withEnv("SPRING_PROFILES_ACTIVE", "debug");
     return s3Container;
   }
 

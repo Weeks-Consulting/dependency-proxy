@@ -16,20 +16,23 @@ logging:
     # org.springframework: TRACE
     # org.springframework.jdbc: TRACE
     # io.awspring.cloud: TRACE
-    us.weeksconsulting: TRACE
+    # software.amazon.awssdk: TRACE
+    us.weeksconsulting: DEBUG
 
 application:
+  cleanup:
+    schedule: 5s
   repositories:
     raw:
       apache:
         base_url: https://dlcdn.apache.org
-        cache_ttl: 30d
+        cache_ttl: 5s
       nodejs:
         base_url: https://dist.nodejs.org
-        cache_ttl: 30d
+        cache_ttl: 5s
       debian:
         base_url: http://deb.debian.org
-        cache_ttl: 30d
+        cache_ttl: 5s
 
 ---
 spring:

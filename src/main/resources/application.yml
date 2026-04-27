@@ -1,10 +1,12 @@
 spring:
   application:
     name: dependency-proxy
+
   cloud:
     aws:
       s3:
         region: us-east-1
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres/dependencyproxy}
     username: ${SPRING_DATASOURCE_USERNAME}
@@ -16,6 +18,10 @@ spring:
     async:
       request-timeout: ${SPRING_MVC_ASYNC_REQUEST_TIMEOUT:300000}
 
+  threads:
+    virtual:
+      enabled: true
+
 logging:
   level:
     org.springframework: INFO
@@ -24,3 +30,5 @@ application:
   storage:
     type: ${APPLICATION_STORAGE_TYPE:-local}
     location: ${APPLICATION_STORAGE_LOCATION:-/data}
+  cleanup:
+    schedule: 30m

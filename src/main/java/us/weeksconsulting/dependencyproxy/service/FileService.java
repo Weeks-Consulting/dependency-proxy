@@ -1,6 +1,7 @@
 package us.weeksconsulting.dependencyproxy.service;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,12 +21,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.awspring.cloud.s3.S3Exception;
 import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
-import us.weeksconsulting.dependencyproxy.config.model.Storage;
 import us.weeksconsulting.dependencyproxy.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependencyproxy.exception.UnknownStorageTypeException;
 import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
 
 @Service
@@ -34,29 +35,52 @@ public class FileService {
 
   private final S3Template s3Template;
   private final RepositoryCacheEntryDao repoDao;
-  private final Storage storage;
+  private final String storageType;
+  private final String storageLocation;
 
   public FileService(RepositoryCacheEntryDao repoDao, ApplicationConfig appConfig, S3Template s3Template) {
     this.repoDao = repoDao;
-    this.storage = appConfig.getStorage();
+    this.storageType = appConfig.getStorage().getType();
+    this.storageLocation = appConfig.getStorage().getLocation();
     this.s3Template = s3Template;
+  }
+
+  public InputStream readFileFromCache(
+      String cacheObjectPath,
+      UUID cacheObjectId) throws IOException {
+    switch (storageType) {
+      case "local":
+        Path cacheDirectory = Path.of(storageLocation + File.separator + cacheObjectPath);
+        File cacheFile = new File(cacheDirectory + File.separator + cacheObjectId);
+
+        LOGGER.trace("cacheFile length: {}", cacheFile.length());
+        LOGGER.trace("Returning cacheFile from {}", cacheFile.getAbsolutePath());
+        return new FileInputStream(cacheFile);
+      case "s3":
+        String s3ObjectKey = cacheObjectPath.replace(File.separatorChar, '/') + '/' + cacheObjectId.toString();
+        LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
+        S3Resource s3Resource = s3Template.download(storageLocation, s3ObjectKey);
+        LOGGER.trace("cacheFile length: {}", s3Resource.contentLength());
+
+        String s3Path = "s3://" + s3Resource.getLocation().getBucket() + "/" + s3Resource.getLocation().getObject();
+        LOGGER.trace("Returning cacheFile from {}", s3Path);
+
+        LOGGER.trace("s3Resource: {}", s3Resource);
+        return s3Resource.getInputStream();
+      default:
+        throw new UnknownStorageTypeException(storageType);
+    }
   }
 
   @Async
   @Transactional
-  public void writeFileAsync(
-      InputStream inputStream,
+  public void writeFileAsync(InputStream inputStream,
       OutputStream outputStream,
-      UUID cacheObjectId,
-      Path cacheDirectory,
-      File cacheFile) throws IOException {
+      String cacheObjectPath,
+      UUID cacheObjectId) {
     LOGGER.trace("writeFileAsync started");
     LOGGER.trace("cacheObjectId: {}", cacheObjectId);
-    LOGGER.trace("cacheDirectory: {}", cacheDirectory);
-    LOGGER.trace("cacheFile: {}", cacheFile);
-
-    String storageLocation = storage.getLocation();
-    LOGGER.trace("storageLocation: {}", storageLocation);
+    LOGGER.trace("cacheObjectPath: {}", cacheObjectPath);
 
     RepositoryCacheEntry repoEntry = repoDao.getCacheEntryForUpdate(cacheObjectId);
     LOGGER.trace("repoEntry: {}", repoEntry);
@@ -69,105 +93,67 @@ public class FileService {
         outputStream.close();
       } else {
         LOGGER.trace("Acquired row lock. Caching Data to file storage");
-        Files.createDirectories(cacheDirectory);
 
         try {
+          MessageDigest cacheFileDigest;
+          cacheFileDigest = MessageDigest.getInstance("SHA-256");
+          DigestInputStream digestInputStream = new DigestInputStream(inputStream, cacheFileDigest);
 
-          MessageDigest fileHash;
-          fileHash = MessageDigest.getInstance("SHA-256");
-          DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
+          long cacheFileLength = -1;
 
-          cacheFile.createNewFile();
-          Files.copy(digestInputStream, cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+          switch (storageType) {
+            case "local":
+              Path cacheObjectDirectoryPath = Path.of(storageLocation, cacheObjectPath);
+              Files.createDirectories(cacheObjectDirectoryPath);
 
-          LOGGER.trace("cacheFile length: {}", cacheFile.length());
+              File cacheObjectFile = Path.of(storageLocation, cacheObjectPath, cacheObjectId.toString()).toFile();
+              cacheObjectFile.createNewFile();
+              Files.copy(digestInputStream, cacheObjectFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+              cacheFileLength = cacheObjectFile.length();
+              break;
+            case "s3":
+              String s3Bucket = storageLocation;
+              LOGGER.trace("s3Bucket: {}", s3Bucket);
+              String s3ObjectKey = cacheObjectPath.replace(File.separatorChar, '/') + "/" + cacheObjectId.toString();
+              LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
 
-          String cacheFileHash = Hex.encodeHexString(fileHash.digest());
+              S3Resource s3Resource = s3Template.upload(s3Bucket, s3ObjectKey, digestInputStream);
+              cacheFileLength = s3Resource.contentLength();
+              break;
+            default:
+              throw new UnknownStorageTypeException(storageType);
+          }
 
+          LOGGER.trace("cacheFile length: {}", cacheFileLength);
+
+          String cacheFileHash = Hex.encodeHexString(cacheFileDigest.digest());
           LOGGER.trace("cacheFileHash: {}", cacheFileHash);
 
-          repoDao.updateCacheEntry(cacheObjectId, cacheFile.length(), cacheFileHash, true);
-        } catch (NoSuchAlgorithmException e) {
-          LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
-          throw new RuntimeException(e);
+          repoDao.updateCacheEntry(cacheObjectId, cacheFileLength, cacheFileHash, true);
+
+        } catch (NoSuchAlgorithmException exception) {
+          LOGGER.error("SHA-256 Hash Algorithm Not Available", exception);
+          throw new RuntimeException(exception);
         } finally {
           outputStream.close();
         }
 
       }
-    } catch (IOException ex) {
-      // If the incoming piped input stream get's closed prematurely assume the
-      // client disconnected mid download and abandon the caching operation
-      // and attempt to cleanup
-      if (ex.getMessage().contains("Read end dead")) {
+    } catch (S3Exception | IOException exception) {
+      // If the incoming piped input stream get's closed prematurely
+      // assume the client disconnected mid download, abandon caching
+      // operation, and mark for deletion
+      if (exception.getMessage().contains("Read end dead")
+          || exception.getCause().getMessage().contains("Read end dead")) {
         LOGGER.warn("Client Download Interrupted - Skipping Cache Download and Attempting Cleanup");
-        cacheFile.delete();
+        repoDao.updateCacheEntry(cacheObjectId, null, null, false);
       } else {
-        LOGGER.error("{}", ex);
-        throw ex;
+        LOGGER.error("Failed to Cache File", exception);
+        throw new RuntimeException(exception);
       }
     }
 
     LOGGER.trace("writeFileAsync finished");
   }
 
-  @Async
-  public void writeS3Async(InputStream inputStream,
-      OutputStream outputStream,
-      UUID cacheObjectId,
-      String s3ObjectKey) throws IOException {
-
-    LOGGER.trace("writeS3Async started");
-    LOGGER.trace("cacheObjectId: {}", cacheObjectId);
-    LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
-
-    String bucket = storage.getLocation();
-    LOGGER.trace("bucket: {}", bucket);
-
-    RepositoryCacheEntry repoEntry = repoDao.getCacheEntryForUpdate(cacheObjectId);
-    LOGGER.trace("repoEntry: {}", repoEntry);
-
-    if (repoEntry == null) {
-      LOGGER.debug("Unable to get row lock. Assuming another thread is already caching this data");
-      IOUtils.consume(inputStream);
-      outputStream.close();
-    } else {
-      LOGGER.trace("Acquired row lock. Caching Data to file storage");
-      // LOGGER.trace("cacheFile length: {}", cacheFile.length());
-
-      try {
-        MessageDigest fileHash;
-        fileHash = MessageDigest.getInstance("SHA-256");
-        DigestInputStream digestInputStream = new DigestInputStream(inputStream, fileHash);
-
-        S3Resource s3Resource = s3Template.upload(bucket, s3ObjectKey, digestInputStream);
-
-        LOGGER.trace("cacheFile length: {}", s3Resource.contentLength());
-
-        String cacheFileHash = Hex.encodeHexString(fileHash.digest());
-
-        LOGGER.trace("cacheFileHash: {}", cacheFileHash);
-
-        repoDao.updateCacheEntry(cacheObjectId, s3Resource.contentLength(), cacheFileHash, true);
-      } catch (NoSuchAlgorithmException e) {
-        LOGGER.error("SHA-256 Hash Algorithm Not Available", e);
-        throw new RuntimeException(e);
-      } catch (S3Exception ex) {
-        // If the incoming piped input stream get's closed prematurely assume the
-        // client disconnected mid download and abandon the caching operation
-        // and attempt to cleanup
-        if (ex.getCause().getMessage().contains("Read end dead")) {
-          LOGGER.warn("Client Download Interrupted - Skipping Cache Download and Attempting Cleanup");
-          s3Template.deleteObject(bucket, s3ObjectKey);
-        } else {
-          LOGGER.error("{}", ex);
-          throw ex;
-        }
-      } finally {
-        outputStream.close();
-      }
-    }
-
-    LOGGER.trace("writeS3Async finished");
-  }
 }

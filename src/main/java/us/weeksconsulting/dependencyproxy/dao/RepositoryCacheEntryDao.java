@@ -1,20 +1,23 @@
 package us.weeksconsulting.dependencyproxy.dao;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
+
 import javax.sql.DataSource;
-import org.apache.commons.codec.binary.Hex;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.annotation.RegisterReflection;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+
 import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
+import us.weeksconsulting.util.CacheUtils;
 
 @Component
 @RegisterReflection(classes = RepositoryCacheEntry.class, memberCategories = {
@@ -26,6 +29,28 @@ public class RepositoryCacheEntryDao {
 
   public RepositoryCacheEntryDao(DataSource dataSource) {
     this.jdbcClient = JdbcClient.create(dataSource);
+  }
+
+  public Stream<RepositoryCacheEntry> getExpiredCacheEntries(
+      String repositoryType,
+      String repositoryName,
+      Duration cacheTTL) {
+
+    return this.jdbcClient
+        .sql("""
+            select *
+              from repository_cache
+              where is_cached
+                and repository_type = :repository_type
+                and repository_name = :repository_name
+                and inserted_at < current_timestamp - (:cache_ttl * interval '1 second')
+              for key share skip locked
+            """)
+        .param("repository_type", repositoryType)
+        .param("repository_name", repositoryName)
+        .param("cache_ttl", cacheTTL.getSeconds())
+        .query(RepositoryCacheEntry.class)
+        .stream();
   }
 
   public RepositoryCacheEntry getCacheEntry(
@@ -41,8 +66,6 @@ public class RepositoryCacheEntryDao {
         urlPath,
         urlParams);
 
-    String serializedUrlParams = serializeUrlParams(urlParams);
-
     return this.jdbcClient
         .sql("""
             select *
@@ -52,11 +75,12 @@ public class RepositoryCacheEntryDao {
                 and repository_name = :repository_name
                 and url_path = :url_path
                 and url_params = :url_params
+              for key share
             """)
         .param("repository_type", repositoryType)
         .param("repository_name", repositoryName)
         .param("url_path", urlPath)
-        .param("url_params", serializedUrlParams)
+        .param("url_params", CacheUtils.serializeUrlParams(urlParams))
         .query(RepositoryCacheEntry.class)
         .optional().orElse(null);
   }
@@ -70,6 +94,7 @@ public class RepositoryCacheEntryDao {
             select *
               from repository_cache
               where cache_object_id = :cache_object_id
+              for key share
             """)
         .param("cache_object_id", cacheObjectId)
         .query(RepositoryCacheEntry.class)
@@ -77,7 +102,6 @@ public class RepositoryCacheEntryDao {
   }
 
   public RepositoryCacheEntry getCacheEntryForUpdate(UUID cacheObjectId) {
-
     LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
 
     return this.jdbcClient
@@ -85,7 +109,22 @@ public class RepositoryCacheEntryDao {
             select *
               from repository_cache
               where cache_object_id = :cache_object_id
-              for update skip locked
+              for no key update skip locked
+            """)
+        .param("cache_object_id", cacheObjectId)
+        .query(RepositoryCacheEntry.class)
+        .optional().orElse(null);
+  }
+
+  public void lockCacheEntryForDelete(UUID cacheObjectId) {
+    LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
+
+    this.jdbcClient
+        .sql("""
+            select *
+              from repository_cache
+              where cache_object_id = :cache_object_id
+              for update
             """)
         .param("cache_object_id", cacheObjectId)
         .query(RepositoryCacheEntry.class)
@@ -107,11 +146,6 @@ public class RepositoryCacheEntryDao {
         urlParams,
         mime_type);
 
-    String serializedUrlParams = serializeUrlParams(urlParams);
-    String objectFilepath = getObjectFilePath(urlPath, serializedUrlParams);
-    UUID cacheObjectId = UUID.randomUUID();
-    Timestamp now = Timestamp.from(Instant.now());
-
     return this.jdbcClient
         .sql("""
             insert
@@ -122,11 +156,7 @@ public class RepositoryCacheEntryDao {
                 url_params,
                 mime_type,
                 cache_object_path,
-                cache_object_id,
-                is_cached,
-                inserted_at,
-                updated_at
-                )
+                cache_object_id                )
             values (
               :repository_type,
               :repository_name,
@@ -134,10 +164,7 @@ public class RepositoryCacheEntryDao {
               :url_params,
               :mime_type,
               :cache_object_path,
-              :cache_object_id,
-              :is_cached,
-              :inserted_at,
-              :updated_at
+              :cache_object_id
               )
             on conflict do nothing
             returning *
@@ -145,13 +172,10 @@ public class RepositoryCacheEntryDao {
         .param("repository_type", repositoryType)
         .param("repository_name", repositoryName)
         .param("url_path", urlPath)
-        .param("url_params", serializedUrlParams)
+        .param("url_params", CacheUtils.serializeUrlParams(urlParams))
         .param("mime_type", mime_type)
-        .param("cache_object_path", objectFilepath)
-        .param("cache_object_id", cacheObjectId)
-        .param("is_cached", false)
-        .param("inserted_at", now)
-        .param("updated_at", now)
+        .param("cache_object_path", CacheUtils.getObjectFilePath(urlPath, urlParams))
+        .param("cache_object_id", UUID.randomUUID())
         .query(RepositoryCacheEntry.class)
         .optional()
         .orElseGet(() -> getCacheEntry(repositoryType, repositoryName, urlPath, urlParams));
@@ -162,7 +186,7 @@ public class RepositoryCacheEntryDao {
       UUID cacheObjectId,
       Long cacheObjectSize,
       String cacheObjectHash,
-      boolean isCached) {
+      Boolean isCached) {
 
     LOGGER.trace(
         "updateCacheEntry - cacheObjectId: {}, cacheObjectHash: {}, cacheObjectHash: {}, isCached: {}",
@@ -170,8 +194,6 @@ public class RepositoryCacheEntryDao {
         cacheObjectHash,
         cacheObjectHash,
         isCached);
-
-    Timestamp now = Timestamp.from(Instant.now());
 
     this.jdbcClient
         .sql("""
@@ -186,30 +208,22 @@ public class RepositoryCacheEntryDao {
         .param("cache_object_size", cacheObjectSize)
         .param("cache_object_hash", cacheObjectHash)
         .param("is_cached", isCached)
-        .param("updated_at", now)
+        .param("updated_at", Timestamp.from(Instant.now()))
         .update();
   }
 
-  private String serializeUrlParams(Map<String, String> urlParams) {
-    return String.valueOf(urlParams);
+  public void deleteCacheEntry(UUID cacheObjectId) {
+
+    LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
+
+    this.jdbcClient
+        .sql("""
+            delete
+              from repository_cache
+              where cache_object_id = :cache_object_id
+            """)
+        .param("cache_object_id", cacheObjectId)
+        .update();
   }
 
-  private String getObjectFilePath(String urlPath, String serializedUrlParams) {
-
-    try {
-      MessageDigest digest;
-      digest = MessageDigest.getInstance("SHA-256");
-      byte[] encodedHash = digest.digest((urlPath + serializedUrlParams).getBytes());
-      String sha256Hex = Hex.encodeHexString(encodedHash);
-
-      String level1Dir = sha256Hex.substring(0, 1);
-      String level2Dir = sha256Hex.substring(1, 2);
-
-      return "/" + level1Dir + "/" + level2Dir;
-    } catch (NoSuchAlgorithmException exception) {
-      LOGGER.error("Error generation object file path.", exception);
-      throw new RuntimeException(exception);
-    }
-
-  }
 }

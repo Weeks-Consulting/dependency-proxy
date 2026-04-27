@@ -42,18 +42,22 @@ services:
       SPRING_APPLICATION_JSON: |
         {
           "application": {
+            "cleanup": {
+              "schedule": "10s"
+              },
             "repositories": {
               "raw": {
-                "apache": {  "base_url": "https://dlcdn.apache.org",
-                  "cache_ttl": "30d"
+                "apache": {  
+                  "base_url": "https://dlcdn.apache.org",
+                  "cache_ttl": "10s"
                 },
                 "nodejs": {
                   "base_url": "https://dist.nodejs.org",
-                  "cache_ttl": "30d"
+                  "cache_ttl": "10s"
                 },
                 "debian": {
                   "base_url": "http://deb.debian.org",
-                  "cache_ttl": "30d"
+                  "cache_ttl": "10s"
                 }
               }
             }

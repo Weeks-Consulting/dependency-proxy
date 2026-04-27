@@ -15,6 +15,9 @@ time curl -v 'http://localhost:8080/raw/apache/nifi/2.9.0/minifi-toolkit-2.9.0-b
 
 # 200mb file
 time curl -v 'http://localhost:8080/raw/apache/nifi/2.9.0/minifi-2.9.0-bin.zip' | md5sum
+
+# 800mb file
+time curl -v 'http://localhost:8080/raw/apache/nifi/2.9.0/nifi-2.9.0-bin.zip' | md5sum
 ```
 
 ### Test Debian Cache in Docker Container
