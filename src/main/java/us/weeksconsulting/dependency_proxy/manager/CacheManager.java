@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.manager;
+package us.weeksconsulting.dependency_proxy.manager;
 
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 
@@ -6,40 +6,42 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.io.input.TeeInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
-import us.weeksconsulting.dependencyproxy.config.model.Repository;
-import us.weeksconsulting.dependencyproxy.dao.RepositoryCacheEntryDao;
-import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
-import us.weeksconsulting.dependencyproxy.service.FileService;
+import us.weeksconsulting.dependency_proxy.config.ApplicationConfig;
+import us.weeksconsulting.dependency_proxy.config.model.Repository;
+import us.weeksconsulting.dependency_proxy.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependency_proxy.exception.UnknownRepositoryException;
+import us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry;
+import us.weeksconsulting.dependency_proxy.service.FileService;
 
 @Component
 public class CacheManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(CacheManager.class);
 
+  private final Map<String, Repository> rawRepositories;
   private final RepositoryCacheEntryDao repoDao;
   private final FileService fileService;
-
-  private final Map<String, Map<String, Repository>> repositories;
 
   public CacheManager(
       ApplicationConfig appConfig,
       RepositoryCacheEntryDao repoDao,
       FileService fileService) {
-    this.repositories = appConfig.getRepositories();
-
+    this.rawRepositories = appConfig.getRepositories().getRawRepositories();
     this.repoDao = repoDao;
     this.fileService = fileService;
   }
@@ -48,10 +50,14 @@ public class CacheManager {
       String repositoryType,
       String repositoryName,
       String urlPath,
-      Map<String, String> urlParams)
+      MultiValueMap<String, String> urlParams)
       throws IOException {
 
-    Repository repo = repositories.get(repositoryType).get(repositoryName);
+    Repository repo = rawRepositories.get(repositoryName);
+
+    if (repo == null) {
+      throw new UnknownRepositoryException(repositoryName);
+    }
 
     LOGGER.trace("repo: {}", repo);
 
@@ -75,16 +81,13 @@ public class CacheManager {
       String url = repo.getBaseUrl() + urlPath;
       LOGGER.trace("url: {}", url);
       return RestClient.create().get().uri(url).exchange((request, response) -> {
+        LOGGER.trace("responseBody: {}", response.getBody());
 
         LOGGER.trace("responseHeaders: {}", response.getHeaders());
-        List<String> contentHeaders = response.getHeaders().get(CONTENT_TYPE);
+        MediaType contentType = response.getHeaders().getContentType();
         HttpHeaders responseHeaders = new HttpHeaders();
 
-        String mimeType = null;
-        if (contentHeaders != null && !contentHeaders.isEmpty()) {
-          mimeType = contentHeaders.getFirst();
-          responseHeaders.add(CONTENT_TYPE, mimeType);
-        }
+        responseHeaders.setContentType(contentType);
 
         RepositoryCacheEntry repositoryCacheEntry;
 
@@ -94,7 +97,7 @@ public class CacheManager {
               repositoryName,
               urlPath,
               urlParams,
-              mimeType);
+              contentType);
         } else {
           repositoryCacheEntry = existingRepositoryCacheEntry;
         }
@@ -104,8 +107,34 @@ public class CacheManager {
         String cacheObjectPath = repositoryCacheEntry.getCacheObjectPath();
         UUID cacheObjectId = repositoryCacheEntry.getCacheObjectId();
 
-        LOGGER.trace("Calling getOrCache for cacheObjectPath: {}, cacheObjectId: {}", cacheObjectPath, cacheObjectId);
-        InputStream inputStream = getAndCache(response.getBody(), cacheObjectPath, cacheObjectId);
+        AtomicReference<Boolean> excludeFromCache = new AtomicReference<>();
+        excludeFromCache.set(false);
+        repo.getExcludes().forEach(excludePath -> {
+          if (urlPath.startsWith(excludePath)) {
+            excludeFromCache.set(true);
+            LOGGER.info(
+                "Skip Caching for Excluded Path - {} - {}",
+                excludePath,
+                urlPath);
+          }
+        });
+
+        if (!response.getStatusCode().isSameCodeAs(HttpStatus.OK)) {
+          LOGGER.warn(
+              "Skip Caching for HTTP Status Code {} - {} - {}",
+              response.getStatusCode().value(),
+              response.getStatusText(),
+              url);
+          excludeFromCache.set(true);
+        }
+
+        InputStream inputStream;
+        if (excludeFromCache.get()) {
+          inputStream = response.getBody();
+        } else {
+          inputStream = getAndCache(response.getBody(), cacheObjectPath, cacheObjectId);
+        }
+
         LOGGER.trace("Returning ResponseEntity");
         return ResponseEntity.ok()
             .headers(responseHeaders)
@@ -118,10 +147,8 @@ public class CacheManager {
 
       HttpHeaders responseHeaders = new HttpHeaders();
       responseHeaders.add(CONTENT_TYPE, existingRepositoryCacheEntry.getMimeType());
-
       String cacheObjectPath = existingRepositoryCacheEntry.getCacheObjectPath();
       UUID cacheObjectId = existingRepositoryCacheEntry.getCacheObjectId();
-      LOGGER.trace("Calling getOrCache for cacheObjectPath: {}, cacheObjectId: {}", cacheObjectPath, cacheObjectId);
       InputStream inputStream = fileService.readFileFromCache(cacheObjectPath, cacheObjectId);
       LOGGER.trace("Returning ResponseEntity");
       return ResponseEntity.ok()

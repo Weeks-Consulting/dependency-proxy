@@ -1,18 +1,18 @@
-package us.weeksconsulting.dependencyproxy.controller;
+package us.weeksconsulting.dependency_proxy.controller;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import us.weeksconsulting.dependencyproxy.manager.CacheManager;
+import us.weeksconsulting.dependency_proxy.manager.CacheManager;
 
 @Controller
 public class ProxyRoutingController {
@@ -24,17 +24,13 @@ public class ProxyRoutingController {
     this.cacheManager = cacheManager;
   }
 
-  @GetMapping("/{repositoryType}/{repositoryName}/{*urlPath}")
-  public ResponseEntity<StreamingResponseBody> getRequest(
-      @PathVariable String repositoryType,
+  @GetMapping("/raw/{repositoryName}/{*urlPath}")
+  public ResponseEntity<StreamingResponseBody> getRawRequest(
       @PathVariable String repositoryName,
       @PathVariable String urlPath,
-      @RequestParam(required = false) Map<String, String> urlParams) throws IOException {
-    LOGGER.trace("repositoryType: {}", repositoryType);
-    LOGGER.trace("repositoryName: {}", repositoryName);
-    LOGGER.trace("urlPath: {}", urlPath);
-    LOGGER.trace("urlParams: {}", urlParams);
+      @RequestParam(required = false) MultiValueMap<String, String> urlParams) throws IOException {
+    LOGGER.trace("getRawRequest -> repositoryName: {}, urlPath: {}, urlParams: {}", repositoryName, urlPath, urlParams);
 
-    return cacheManager.getThroughCache(repositoryType, repositoryName, urlPath, urlParams);
+    return cacheManager.getThroughCache("raw", repositoryName, urlPath, urlParams);
   }
 }

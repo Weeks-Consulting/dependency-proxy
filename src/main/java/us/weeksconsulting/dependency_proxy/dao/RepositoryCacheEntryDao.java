@@ -1,23 +1,27 @@
-package us.weeksconsulting.dependencyproxy.dao;
+package us.weeksconsulting.dependency_proxy.dao;
 
+import java.io.File;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.sql.DataSource;
 
+import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.annotation.RegisterReflection;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
-import us.weeksconsulting.util.CacheUtils;
+import us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry;
 
 @Component
 @RegisterReflection(classes = RepositoryCacheEntry.class, memberCategories = {
@@ -43,7 +47,7 @@ public class RepositoryCacheEntryDao {
               where is_cached
                 and repository_type = :repository_type
                 and repository_name = :repository_name
-                and inserted_at < current_timestamp - (:cache_ttl * interval '1 second')
+                and cached_at < current_timestamp - (:cache_ttl * interval '1 second')
               for key share skip locked
             """)
         .param("repository_type", repositoryType)
@@ -57,7 +61,7 @@ public class RepositoryCacheEntryDao {
       String repositoryType,
       String repositoryName,
       String urlPath,
-      Map<String, String> urlParams) {
+      MultiValueMap<String, String> urlParams) {
 
     LOGGER.trace(
         "getCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
@@ -73,14 +77,12 @@ public class RepositoryCacheEntryDao {
               where 1=1
                 and repository_type = :repository_type
                 and repository_name = :repository_name
-                and url_path = :url_path
-                and url_params = :url_params
+                and url = :url
               for key share
             """)
         .param("repository_type", repositoryType)
         .param("repository_name", repositoryName)
-        .param("url_path", urlPath)
-        .param("url_params", CacheUtils.serializeUrlParams(urlParams))
+        .param("url", serializeUrl(urlPath, urlParams))
         .query(RepositoryCacheEntry.class)
         .optional().orElse(null);
   }
@@ -135,7 +137,7 @@ public class RepositoryCacheEntryDao {
       String repositoryType,
       String repositoryName,
       String urlPath,
-      Map<String, String> urlParams,
+      MultiValueMap<String, String> urlParams,
       String mime_type) {
 
     LOGGER.trace(
@@ -152,16 +154,14 @@ public class RepositoryCacheEntryDao {
               into repository_cache (
                 repository_type,
                 repository_name,
-                url_path,
-                url_params,
+                url,
                 mime_type,
                 cache_object_path,
                 cache_object_id                )
             values (
               :repository_type,
               :repository_name,
-              :url_path,
-              :url_params,
+              :url,
               :mime_type,
               :cache_object_path,
               :cache_object_id
@@ -171,10 +171,9 @@ public class RepositoryCacheEntryDao {
             """)
         .param("repository_type", repositoryType)
         .param("repository_name", repositoryName)
-        .param("url_path", urlPath)
-        .param("url_params", CacheUtils.serializeUrlParams(urlParams))
+        .param("url", serializeUrl(urlPath, urlParams))
         .param("mime_type", mime_type)
-        .param("cache_object_path", CacheUtils.getObjectFilePath(urlPath, urlParams))
+        .param("cache_object_path", getObjectFilePath(serializeUrl(urlPath, urlParams)))
         .param("cache_object_id", UUID.randomUUID())
         .query(RepositoryCacheEntry.class)
         .optional()
@@ -195,21 +194,36 @@ public class RepositoryCacheEntryDao {
         cacheObjectHash,
         isCached);
 
-    this.jdbcClient
-        .sql("""
-            update repository_cache
-              set cache_object_size = :cache_object_size,
-                  cache_object_hash = :cache_object_hash,
-                  is_cached = :is_cached,
-                  updated_at = :updated_at
-              where cache_object_id = :cache_object_id
-            """)
-        .param("cache_object_id", cacheObjectId)
-        .param("cache_object_size", cacheObjectSize)
-        .param("cache_object_hash", cacheObjectHash)
-        .param("is_cached", isCached)
-        .param("updated_at", Timestamp.from(Instant.now()))
-        .update();
+    if (isCached) {
+      this.jdbcClient
+          .sql("""
+              update repository_cache
+                set cache_object_size = :cache_object_size,
+                    cache_object_hash = :cache_object_hash,
+                    is_cached = :is_cached,
+                    cached_at = :cached_at
+                where cache_object_id = :cache_object_id
+              """)
+          .param("cache_object_id", cacheObjectId)
+          .param("cache_object_size", cacheObjectSize)
+          .param("cache_object_hash", cacheObjectHash)
+          .param("is_cached", isCached)
+          .param("cached_at", Timestamp.from(Instant.now()))
+          .update();
+    } else {
+      this.jdbcClient
+          .sql("""
+              update repository_cache
+                set cache_object_size = null,
+                    cache_object_hash = null,
+                    is_cached = :is_cached,
+                    cached_at = null
+                where cache_object_id = :cache_object_id
+              """)
+          .param("cache_object_id", cacheObjectId)
+          .update();
+    }
+
   }
 
   public void deleteCacheEntry(UUID cacheObjectId) {
@@ -224,6 +238,32 @@ public class RepositoryCacheEntryDao {
             """)
         .param("cache_object_id", cacheObjectId)
         .update();
+  }
+
+  private String serializeUrl(String urlPath, MultiValueMap<String, String> urlParams) {
+    return UriComponentsBuilder
+        .fromPath(urlPath)
+        .queryParams(urlParams)
+        .toUriString();
+  }
+
+  private String getObjectFilePath(String url) {
+
+    try {
+      MessageDigest digest;
+      digest = MessageDigest.getInstance("SHA-256");
+      byte[] encodedHash = digest.digest((url).getBytes());
+      String sha256Hex = Hex.encodeHexString(encodedHash);
+
+      String level1Dir = sha256Hex.substring(0, 1);
+      String level2Dir = sha256Hex.substring(1, 2);
+
+      return level1Dir + File.separator + level2Dir;
+    } catch (NoSuchAlgorithmException exception) {
+      LOGGER.error("Error generation object file path.", exception);
+      throw new RuntimeException(exception);
+    }
+
   }
 
 }

@@ -1,0 +1,16 @@
+services:
+  init-local-storage:
+    image: busybox:latest
+    volumes:
+      - cache_data:/data
+    command: chown -R 1002:1002 /data
+    
+  webapp:
+    depends_on:
+      init-local-storage:
+        condition: service_completed_successfully
+    volumes:
+      - cache_data:/data
+    environment:
+      CACHE_STORAGE_TYPE: ${CACHE_STORAGE_TYPE:-local}
+      CACHE_STORAGE_LOCATION: ${CACHE_STORAGE_LOCATION:-/data}

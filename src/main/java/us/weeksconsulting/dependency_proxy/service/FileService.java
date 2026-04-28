@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.service;
+package us.weeksconsulting.dependency_proxy.service;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,10 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-import us.weeksconsulting.dependencyproxy.config.ApplicationConfig;
-import us.weeksconsulting.dependencyproxy.dao.RepositoryCacheEntryDao;
-import us.weeksconsulting.dependencyproxy.exception.UnknownStorageTypeException;
-import us.weeksconsulting.dependencyproxy.model.RepositoryCacheEntry;
+import us.weeksconsulting.dependency_proxy.config.ApplicationConfig;
+import us.weeksconsulting.dependency_proxy.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependency_proxy.exception.UnknownStorageTypeException;
+import us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry;
 
 @Service
 public class FileService {

@@ -1,10 +1,4 @@
 services:
-  init:
-    image: busybox:latest
-    volumes:
-      - cache_data:/data
-    command: chown -R 1002:1002 /data
-
   postgres:
     image: postgres:18-alpine
     healthcheck:
@@ -14,31 +8,25 @@ services:
       retries: 5
       start_period: 5s # Grace period for initial startup
     ports:
-      - 55433:5432
+      - 15433:5432
     volumes:
       - db_data:/var/lib/postgresql
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-dependencyproxy}
-      POSTGRES_USER: ${POSTGRES_USER:-dependencyproxy}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dependencyproxy}
+      POSTGRES_DB: ${POSTGRES_DB:-dependency_proxy}
+      POSTGRES_USER: ${POSTGRES_USER:-dependency_proxy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dependency_proxy}
 
-  dependency-proxy:
+  webapp:
     image: weeksconsulting-us/dependency-proxy:0.0.1-SNAPSHOT
     ports:
       - 8080:8080
-    volumes:
-      - cache_data:/data
     depends_on:
       postgres:
         condition: service_healthy
-      init:
-        condition: service_completed_successfully
     environment:
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-dependencyproxy}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dependencyproxy}
-      APPLICATION_STORAGE_TYPE: ${STORAGE_TYPE:-local}
-      APPLICATION_STORAGE_LOCATION: ${STORAGE_LOCATION:-/data}
-      LOGGING_LEVEL_US_WEEKSCONSULTING: TRACE
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-dependency_proxy}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dependency_proxy}
+      LOGGING_LEVEL_US_WEEKSCONSULTING: DEBUG
       SPRING_APPLICATION_JSON: |
         {
           "application": {
@@ -47,7 +35,7 @@ services:
               },
             "repositories": {
               "raw": {
-                "apache": {  
+                "apache": {
                   "base_url": "https://dlcdn.apache.org",
                   "cache_ttl": "10s"
                 },
@@ -57,7 +45,11 @@ services:
                 },
                 "debian": {
                   "base_url": "http://deb.debian.org",
-                  "cache_ttl": "10s"
+                  "cache_ttl": "10s",
+                  "excludes": [
+                    "/debian/dists/",
+                    "/debian-security/dists/"
+                    ]          
                 }
               }
             }

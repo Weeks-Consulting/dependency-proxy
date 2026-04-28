@@ -1,14 +1,12 @@
-package us.weeksconsulting.dependencyproxy.config;
-
-import java.util.Map;
+package us.weeksconsulting.dependency_proxy.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
-import us.weeksconsulting.dependencyproxy.config.model.Repository;
-import us.weeksconsulting.dependencyproxy.config.model.Storage;
+import us.weeksconsulting.dependency_proxy.config.model.Repositories;
+import us.weeksconsulting.dependency_proxy.config.model.Storage;
 
 @ConfigurationProperties(prefix = "application")
 public class ApplicationConfig {
@@ -18,10 +16,10 @@ public class ApplicationConfig {
   private final Storage storage;
 
   @NestedConfigurationProperty
-  private final Map<String, Map<String, Repository>> repositories;
+  private final Repositories repositories;
 
-  public ApplicationConfig(Storage storage, Map<String, Map<String, Repository>> repositories) {
-    LOGGER.trace("Constructed RepositoryConfigs: storage: {}, repositories: {}", storage, repositories);
+  public ApplicationConfig(Storage storage, Repositories repositories) {
+    LOGGER.debug("ApplicationConfig: storage: {}, repositories: {}", storage, repositories);
     this.storage = storage;
     this.repositories = repositories;
   }
@@ -30,7 +28,7 @@ public class ApplicationConfig {
     return storage;
   }
 
-  public Map<String, Map<String, Repository>> getRepositories() {
+  public Repositories getRepositories() {
     return repositories;
   }
 

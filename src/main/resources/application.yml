@@ -5,10 +5,16 @@ spring:
   cloud:
     aws:
       s3:
-        region: us-east-1
+        region: ${S3_REGION:us-east-1}
+        endpoint: ${S3_ENDPOINT:https://s3.us-east-1.amazonaws.com}
+        path-style-access-enabled: ${S3_PATH_STYLE_ACCESS_ENABLED:false}
+      credentials:
+        access-key: ${S3_ACCESS_KEY}
+        secret-key: ${S3_SECRET_KEY}
+
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres/dependencyproxy}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres/dependency_proxy}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     configuration:
@@ -17,6 +23,13 @@ spring:
   mvc:
     async:
       request-timeout: ${SPRING_MVC_ASYNC_REQUEST_TIMEOUT:300000}
+
+server:
+  # Don't return error messages to client
+  error:
+    include-message: always
+    include-binding-errors: never
+    include-stacktrace: never
 
   threads:
     virtual:
@@ -28,7 +41,7 @@ logging:
 
 application:
   storage:
-    type: ${APPLICATION_STORAGE_TYPE:-local}
-    location: ${APPLICATION_STORAGE_LOCATION:-/data}
+    type: ${CACHE_STORAGE_TYPE:-local}
+    location: ${CACHE_STORAGE_LOCATION:-/data}
   cleanup:
     schedule: 30m

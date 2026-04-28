@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.config.model;
+package us.weeksconsulting.dependency_proxy.config.model;
 
 public class Storage {
     private final String type;

@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy;
+package us.weeksconsulting.dependency_proxy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

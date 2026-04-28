@@ -2,6 +2,8 @@ spring:
   autoconfigure:
     # Get rid of annoying error on shutdown.
     exclude: org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
+  devtools:
+    add-properties: false
 
 server:
   shutdown: immediate
@@ -26,13 +28,16 @@ application:
     raw:
       apache:
         base_url: https://dlcdn.apache.org
-        cache_ttl: 5s
+        cache_ttl: 10s        
       nodejs:
         base_url: https://dist.nodejs.org
-        cache_ttl: 5s
+        cache_ttl: 30m
       debian:
         base_url: http://deb.debian.org
-        cache_ttl: 5s
+        cache_ttl: 30m
+        excludes:
+          - /debian/dists/
+          - /debian-security/dists/
 
 ---
 spring:

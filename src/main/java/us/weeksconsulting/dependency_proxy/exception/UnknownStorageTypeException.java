@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.exception;
+package us.weeksconsulting.dependency_proxy.exception;
 
 public class UnknownStorageTypeException extends RuntimeException {
 

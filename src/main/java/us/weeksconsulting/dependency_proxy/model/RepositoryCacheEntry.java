@@ -1,4 +1,4 @@
-package us.weeksconsulting.dependencyproxy.model;
+package us.weeksconsulting.dependency_proxy.model;
 
 import java.sql.Timestamp;
 import java.util.UUID;
@@ -6,42 +6,36 @@ import java.util.UUID;
 public class RepositoryCacheEntry {
   private final String repositoryType;
   private final String repositoryName;
-  private final String urlPath;
-  private final String urlParams;
+  private final String url;
   private final String mimeType;
   private final String cacheObjectPath;
   private final UUID cacheObjectId;
   private final Long cacheObjectSize;
   private final String cacheObjectHash;
   private final boolean isCached;
-  private final Timestamp insertedAt;
-  private final Timestamp updatedAt;
+  private final Timestamp cachedAt;
 
   public RepositoryCacheEntry(
       String repositoryType,
       String repositoryName,
-      String urlPath,
-      String urlParams,
+      String url,
       String mimeType,
       String cacheObjectPath,
       UUID cacheObjectId,
       Long cacheObjectSize,
       String cacheObjectHash,
       boolean isCached,
-      Timestamp insertedAt,
-      Timestamp updatedAt) {
+      Timestamp cachedAt) {
     this.repositoryType = repositoryType;
     this.repositoryName = repositoryName;
-    this.urlPath = urlPath;
-    this.urlParams = urlParams;
+    this.url = url;
     this.mimeType = mimeType;
     this.cacheObjectPath = cacheObjectPath;
     this.cacheObjectId = cacheObjectId;
     this.cacheObjectSize = cacheObjectSize;
     this.cacheObjectHash = cacheObjectHash;
     this.isCached = isCached;
-    this.insertedAt = insertedAt;
-    this.updatedAt = updatedAt;
+    this.cachedAt = cachedAt;
   }
 
   public String getRepositoryType() {
@@ -52,12 +46,8 @@ public class RepositoryCacheEntry {
     return repositoryName;
   }
 
-  public String getUrlPath() {
-    return urlPath;
-  }
-
-  public String getUrlParams() {
-    return urlParams;
+  public String getUrl() {
+    return url;
   }
 
   public String getMimeType() {
@@ -84,21 +74,16 @@ public class RepositoryCacheEntry {
     return isCached;
   }
 
-  public Timestamp getInsertedAt() {
-    return insertedAt;
-  }
-
-  public Timestamp getUpdatedAt() {
-    return updatedAt;
+  public Timestamp getCachedAt() {
+    return cachedAt;
   }
 
   @Override
   public String toString() {
-    return "RepositoryCacheEntry [repositoryType=" + repositoryType + ", repositoryName=" + repositoryName
-        + ", urlPath=" + urlPath + ", urlParams=" + urlParams + ", mimeType=" + mimeType + ", cacheObjectPath="
-        + cacheObjectPath + ", cacheObjectId=" + cacheObjectId + ", cacheObjectSize=" + cacheObjectSize
-        + ", cacheObjectHash=" + cacheObjectHash + ", isCached=" + isCached + ", insertedAt=" + insertedAt
-        + ", updatedAt=" + updatedAt + "]";
+    return "RepositoryCacheEntry [repositoryType=" + repositoryType + ", repositoryName=" + repositoryName + ", url="
+        + url + ", mimeType=" + mimeType + ", cacheObjectPath=" + cacheObjectPath + ", cacheObjectId=" + cacheObjectId
+        + ", cacheObjectSize=" + cacheObjectSize + ", cacheObjectHash=" + cacheObjectHash + ", isCached=" + isCached
+        + ", cachedAt=" + cachedAt + "]";
   }
 
 }
