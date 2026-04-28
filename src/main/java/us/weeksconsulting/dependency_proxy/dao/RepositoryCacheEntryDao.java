@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.annotation.RegisterReflection;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
@@ -103,7 +105,7 @@ public class RepositoryCacheEntryDao {
         .optional().orElse(null);
   }
 
-  public RepositoryCacheEntry getCacheEntryForUpdate(UUID cacheObjectId) {
+  public Optional<RepositoryCacheEntry> getCacheEntryForUpdate(UUID cacheObjectId) {
     LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
 
     return this.jdbcClient
@@ -115,11 +117,11 @@ public class RepositoryCacheEntryDao {
             """)
         .param("cache_object_id", cacheObjectId)
         .query(RepositoryCacheEntry.class)
-        .optional().orElse(null);
+        .optional();
   }
 
   public void lockCacheEntryForDelete(UUID cacheObjectId) {
-    LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
+    LOGGER.trace("lockCacheEntryForDelete - cacheObjectId: {}", cacheObjectId);
 
     this.jdbcClient
         .sql("""
@@ -138,15 +140,15 @@ public class RepositoryCacheEntryDao {
       String repositoryName,
       String urlPath,
       MultiValueMap<String, String> urlParams,
-      String mime_type) {
+      MediaType mimeType) {
 
     LOGGER.trace(
-        "insertGetCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}, mime_type: {}",
+        "insertGetCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}, mimeType: {}",
         repositoryType,
         repositoryName,
         urlPath,
         urlParams,
-        mime_type);
+        mimeType);
 
     return this.jdbcClient
         .sql("""
@@ -172,7 +174,7 @@ public class RepositoryCacheEntryDao {
         .param("repository_type", repositoryType)
         .param("repository_name", repositoryName)
         .param("url", serializeUrl(urlPath, urlParams))
-        .param("mime_type", mime_type)
+        .param("mime_type", mimeType)
         .param("cache_object_path", getObjectFilePath(serializeUrl(urlPath, urlParams)))
         .param("cache_object_id", UUID.randomUUID())
         .query(RepositoryCacheEntry.class)
@@ -194,7 +196,7 @@ public class RepositoryCacheEntryDao {
         cacheObjectHash,
         isCached);
 
-    if (isCached) {
+    if (Boolean.TRUE.equals(isCached)) {
       this.jdbcClient
           .sql("""
               update repository_cache
@@ -228,7 +230,7 @@ public class RepositoryCacheEntryDao {
 
   public void deleteCacheEntry(UUID cacheObjectId) {
 
-    LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
+    LOGGER.trace("deleteCacheEntry - cacheObjectId: {}", cacheObjectId);
 
     this.jdbcClient
         .sql("""

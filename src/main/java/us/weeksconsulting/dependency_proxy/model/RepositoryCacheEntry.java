@@ -3,6 +3,8 @@ package us.weeksconsulting.dependency_proxy.model;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+// Ignore rule about having too many parameters since this represents a database row.
+@SuppressWarnings("java:S107")
 public class RepositoryCacheEntry {
   private final String repositoryType;
   private final String repositoryName;

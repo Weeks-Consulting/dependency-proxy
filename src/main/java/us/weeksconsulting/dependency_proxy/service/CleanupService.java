@@ -56,7 +56,7 @@ public class CleanupService {
         AtomicReference<Boolean> hasRows = new AtomicReference<>();
         hasRows.set(false);
         repositoryCacheEntryStream.forEach(repoCacheEntry -> {
-          if (!hasRows.get()) {
+          if (Boolean.FALSE.equals(hasRows.get())) {
             LOGGER.debug("Cleaning up repo: {}.{}", repoType, repoName);
             hasRows.set(true);
           }

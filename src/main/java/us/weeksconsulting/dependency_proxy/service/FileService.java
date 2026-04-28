@@ -62,6 +62,8 @@ public class FileService {
         S3Resource s3Resource = s3Template.download(storageLocation, s3ObjectKey);
         LOGGER.trace("cacheFile length: {}", s3Resource.contentLength());
 
+        // Ignore rule about hard coded URL's since you have to include the path separator in an S3 URL.
+        @SuppressWarnings("java:S1075")
         String s3Path = "s3://" + s3Resource.getLocation().getBucket() + "/" + s3Resource.getLocation().getObject();
         LOGGER.trace("Returning cacheFile from {}", s3Path);
 
@@ -82,7 +84,7 @@ public class FileService {
     LOGGER.trace("cacheObjectId: {}", cacheObjectId);
     LOGGER.trace("cacheObjectPath: {}", cacheObjectPath);
 
-    RepositoryCacheEntry repoEntry = repoDao.getCacheEntryForUpdate(cacheObjectId);
+    RepositoryCacheEntry repoEntry = repoDao.getCacheEntryForUpdate(cacheObjectId).orElse(null);
     LOGGER.trace("repoEntry: {}", repoEntry);
 
     try {
