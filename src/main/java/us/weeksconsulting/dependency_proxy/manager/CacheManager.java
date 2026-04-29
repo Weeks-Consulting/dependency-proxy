@@ -82,7 +82,7 @@ public class CacheManager {
 
     if (isExcluded(urlPath, repo)) {
       LOGGER.info("Bypassing Cache for Excluded URL - {}", url);
-      return getBypassCache(url, repositoryCacheEntry);
+      return getBypassCache(url);
     } else {
       return getFromCache(url, repositoryCacheEntry);
     }
@@ -125,9 +125,7 @@ public class CacheManager {
 
   }
 
-  private ResponseEntity<StreamingResponseBody> getBypassCache(
-      String url,
-      RepositoryCacheEntry repositoryCacheEntry)
+  private ResponseEntity<StreamingResponseBody> getBypassCache(String url)
       throws IOException {
 
     ClientHttpResponse response = getFromUrl(url);

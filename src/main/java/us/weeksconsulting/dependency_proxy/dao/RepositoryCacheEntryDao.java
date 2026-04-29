@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import us.weeksconsulting.dependency_proxy.exception.MissingHashAlgorithmException;
 import us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry;
 
 @Component
@@ -245,8 +246,8 @@ public class RepositoryCacheEntryDao {
 
       return level1Dir + File.separator + level2Dir;
     } catch (NoSuchAlgorithmException exception) {
-      LOGGER.error("Error generation object file path.", exception);
-      throw new RuntimeException(exception);
+      LOGGER.error("SHA-256 Hash Algorithm Not Available", exception);
+      throw new MissingHashAlgorithmException(exception);
     }
 
   }

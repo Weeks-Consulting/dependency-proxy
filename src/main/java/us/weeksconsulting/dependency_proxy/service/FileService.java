@@ -27,6 +27,8 @@ import io.awspring.cloud.s3.S3Template;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import us.weeksconsulting.dependency_proxy.config.ApplicationConfig;
 import us.weeksconsulting.dependency_proxy.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependency_proxy.exception.CachingException;
+import us.weeksconsulting.dependency_proxy.exception.MissingHashAlgorithmException;
 import us.weeksconsulting.dependency_proxy.exception.UnknownStorageTypeException;
 
 @Service
@@ -92,7 +94,7 @@ public class FileService {
     try {
       if (acquiredLock.equals(Boolean.TRUE)) {
         LOGGER.trace("Successfully Acquired Lock For - {}", cacheObjectId);
-        writeCache(inputStream, outputStream, cacheObjectPath, cacheObjectId, mimeType);
+        writeCache(inputStream, cacheObjectPath, cacheObjectId, mimeType);
       } else {
         LOGGER.trace("Failed Acquiring Lock For - {}", cacheObjectId);
         IOUtils.consume(inputStream);
@@ -105,7 +107,7 @@ public class FileService {
         LOGGER.warn("Client Download Interrupted");
       } else {
         LOGGER.error("Failed to Cache File", exception);
-        throw new RuntimeException(exception);
+        throw new CachingException(exception);
       }
     } finally {
       outputStream.close();
@@ -158,7 +160,7 @@ public class FileService {
       repoDao.updateCacheEntry(cacheObjectId, cacheFileLength, cacheFileHash, mimeType, Boolean.TRUE);
     } catch (NoSuchAlgorithmException exception) {
       LOGGER.error("SHA-256 Hash Algorithm Not Available", exception);
-      throw new RuntimeException(exception);
+      throw new MissingHashAlgorithmException(exception);
     }
 
   }
