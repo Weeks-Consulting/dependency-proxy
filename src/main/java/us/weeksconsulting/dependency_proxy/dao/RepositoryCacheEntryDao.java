@@ -89,19 +89,19 @@ public class RepositoryCacheEntryDao {
         .single();
   }
 
-  public Optional<RepositoryCacheEntry> getCacheEntryForUpdate(UUID cacheObjectId) {
+  public Boolean getCacheEntryForUpdate(UUID cacheObjectId) {
     LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
 
     return this.jdbcClient
         .sql("""
-            select *
+            select true
               from repository_cache
               where cache_object_id = :cache_object_id
               for no key update skip locked
             """)
         .param("cache_object_id", cacheObjectId)
-        .query(RepositoryCacheEntry.class)
-        .optional();
+        .query(Boolean.class)
+        .optional().orElse(Boolean.FALSE);
   }
 
   public Boolean lockCacheEntryForDelete(UUID cacheObjectId) {
