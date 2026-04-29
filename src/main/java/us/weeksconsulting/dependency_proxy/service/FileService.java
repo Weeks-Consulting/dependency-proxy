@@ -17,6 +17,7 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,7 +63,8 @@ public class FileService {
         S3Resource s3Resource = s3Template.download(storageLocation, s3ObjectKey);
         LOGGER.trace("cacheFile length: {}", s3Resource.contentLength());
 
-        // Ignore rule about hard coded URL's since you have to include the path separator in an S3 URL.
+        // Ignore rule about hard coded URL's since you have to include the path
+        // separator in an S3 URL.
         @SuppressWarnings("java:S1075")
         String s3Path = "s3://" + s3Resource.getLocation().getBucket() + "/" + s3Resource.getLocation().getObject();
         LOGGER.trace("Returning cacheFile from {}", s3Path);
@@ -79,7 +81,8 @@ public class FileService {
   public void writeFileAsync(InputStream inputStream,
       OutputStream outputStream,
       String cacheObjectPath,
-      UUID cacheObjectId) {
+      UUID cacheObjectId,
+      MediaType mimeType) {
     LOGGER.trace("writeFileAsync started");
     LOGGER.trace("cacheObjectId: {}", cacheObjectId);
     LOGGER.trace("cacheObjectPath: {}", cacheObjectPath);
@@ -131,7 +134,7 @@ public class FileService {
           String cacheFileHash = Hex.encodeHexString(cacheFileDigest.digest());
           LOGGER.trace("cacheFileHash: {}", cacheFileHash);
 
-          repoDao.updateCacheEntry(cacheObjectId, cacheFileLength, cacheFileHash, true);
+          repoDao.updateCacheEntry(cacheObjectId, cacheFileLength, cacheFileHash, mimeType, Boolean.TRUE);
 
         } catch (NoSuchAlgorithmException exception) {
           LOGGER.error("SHA-256 Hash Algorithm Not Available", exception);
@@ -148,7 +151,7 @@ public class FileService {
       if (exception.getMessage().contains("Read end dead")
           || exception.getCause().getMessage().contains("Read end dead")) {
         LOGGER.warn("Client Download Interrupted - Skipping Cache Download and Attempting Cleanup");
-        repoDao.updateCacheEntry(cacheObjectId, null, null, false);
+        repoDao.updateCacheEntry(cacheObjectId, null, null, null, Boolean.FALSE);
       } else {
         LOGGER.error("Failed to Cache File", exception);
         throw new RuntimeException(exception);

@@ -3,13 +3,15 @@ package us.weeksconsulting.dependency_proxy.model;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+import org.springframework.http.MediaType;
+
 // Ignore rule about having too many parameters since this represents a database row.
 @SuppressWarnings("java:S107")
 public class RepositoryCacheEntry {
   private final String repositoryType;
   private final String repositoryName;
-  private final String url;
-  private final String mimeType;
+  private final String urlPath;
+  private final MediaType mimeType;
   private final String cacheObjectPath;
   private final UUID cacheObjectId;
   private final Long cacheObjectSize;
@@ -20,8 +22,8 @@ public class RepositoryCacheEntry {
   public RepositoryCacheEntry(
       String repositoryType,
       String repositoryName,
-      String url,
-      String mimeType,
+      String urlPath,
+      MediaType mimeType,
       String cacheObjectPath,
       UUID cacheObjectId,
       Long cacheObjectSize,
@@ -30,7 +32,7 @@ public class RepositoryCacheEntry {
       Timestamp cachedAt) {
     this.repositoryType = repositoryType;
     this.repositoryName = repositoryName;
-    this.url = url;
+    this.urlPath = urlPath;
     this.mimeType = mimeType;
     this.cacheObjectPath = cacheObjectPath;
     this.cacheObjectId = cacheObjectId;
@@ -48,11 +50,11 @@ public class RepositoryCacheEntry {
     return repositoryName;
   }
 
-  public String getUrl() {
-    return url;
+  public String getUrlPath() {
+    return urlPath;
   }
 
-  public String getMimeType() {
+  public MediaType getMimeType() {
     return mimeType;
   }
 
@@ -82,8 +84,8 @@ public class RepositoryCacheEntry {
 
   @Override
   public String toString() {
-    return "RepositoryCacheEntry [repositoryType=" + repositoryType + ", repositoryName=" + repositoryName + ", url="
-        + url + ", mimeType=" + mimeType + ", cacheObjectPath=" + cacheObjectPath + ", cacheObjectId=" + cacheObjectId
+    return "RepositoryCacheEntry [repositoryType=" + repositoryType + ", repositoryName=" + repositoryName + ", urlPath="
+        + urlPath + ", mimeType=" + mimeType + ", cacheObjectPath=" + cacheObjectPath + ", cacheObjectId=" + cacheObjectId
         + ", cacheObjectSize=" + cacheObjectSize + ", cacheObjectHash=" + cacheObjectHash + ", isCached=" + isCached
         + ", cachedAt=" + cachedAt + "]";
   }

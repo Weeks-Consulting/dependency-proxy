@@ -31,6 +31,6 @@ public class ProxyRoutingController {
       @RequestParam(required = false) MultiValueMap<String, String> urlParams) throws IOException {
     LOGGER.trace("getRawRequest -> repositoryName: {}, urlPath: {}, urlParams: {}", repositoryName, urlPath, urlParams);
 
-    return cacheManager.getThroughCache("raw", repositoryName, urlPath, urlParams);
+    return cacheManager.get("raw", repositoryName, urlPath, urlParams);
   }
 }

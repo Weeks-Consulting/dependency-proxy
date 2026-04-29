@@ -60,9 +60,9 @@ public class CleanupService {
             LOGGER.debug("Cleaning up repo: {}.{}", repoType, repoName);
             hasRows.set(true);
           }
-          LOGGER.debug("Cleaning up url: {}", repoCacheEntry.getUrl());
+          LOGGER.debug("Cleaning up url: {}", repoCacheEntry.getUrlPath());
 
-          // Acquire an exclusive local on the row to be deleted before removing the file.
+          // Acquire an exclusive lock on the row to be deleted before removing the file.
           LOGGER.trace("Waiting for lock on {}", repoCacheEntry.getCacheObjectId());
           repoDao.lockCacheEntryForDelete(repoCacheEntry.getCacheObjectId());
           LOGGER.trace("Acquired lock on {}", repoCacheEntry.getCacheObjectId());

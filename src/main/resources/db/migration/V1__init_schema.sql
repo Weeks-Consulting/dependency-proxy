@@ -1,7 +1,7 @@
 create table repository_cache (
     repository_type text not null,
     repository_name text not null,
-    url text not null,
+    url_path text not null,
     mime_type text,
     cache_object_path text not null,
     cache_object_id uuid not null,
@@ -9,7 +9,7 @@ create table repository_cache (
     cache_object_hash text,
     is_cached boolean not null default false,
     cached_at timestamp,
-    primary key(repository_type, repository_name, url),
+    primary key(repository_type, repository_name, url_path),
     unique(cache_object_id)
 );
 

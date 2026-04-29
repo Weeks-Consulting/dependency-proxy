@@ -79,12 +79,12 @@ public class RepositoryCacheEntryDao {
               where 1=1
                 and repository_type = :repository_type
                 and repository_name = :repository_name
-                and url = :url
+                and url_path = :url_path
               for key share
             """)
         .param("repository_type", repositoryType)
         .param("repository_name", repositoryName)
-        .param("url", serializeUrl(urlPath, urlParams))
+        .param("url_path", serializeUrl(urlPath, urlParams))
         .query(RepositoryCacheEntry.class)
         .optional().orElse(null);
   }
@@ -139,16 +139,14 @@ public class RepositoryCacheEntryDao {
       String repositoryType,
       String repositoryName,
       String urlPath,
-      MultiValueMap<String, String> urlParams,
-      MediaType mimeType) {
+      MultiValueMap<String, String> urlParams) {
 
     LOGGER.trace(
-        "insertGetCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}, mimeType: {}",
+        "insertGetCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
         repositoryType,
         repositoryName,
         urlPath,
-        urlParams,
-        mimeType);
+        urlParams);
 
     return this.jdbcClient
         .sql("""
@@ -156,15 +154,14 @@ public class RepositoryCacheEntryDao {
               into repository_cache (
                 repository_type,
                 repository_name,
-                url,
-                mime_type,
+                url_path,
                 cache_object_path,
-                cache_object_id                )
+                cache_object_id
+                )
             values (
               :repository_type,
               :repository_name,
-              :url,
-              :mime_type,
+              :url_path,
               :cache_object_path,
               :cache_object_id
               )
@@ -173,8 +170,7 @@ public class RepositoryCacheEntryDao {
             """)
         .param("repository_type", repositoryType)
         .param("repository_name", repositoryName)
-        .param("url", serializeUrl(urlPath, urlParams))
-        .param("mime_type", mimeType)
+        .param("url_path", serializeUrl(urlPath, urlParams))
         .param("cache_object_path", getObjectFilePath(serializeUrl(urlPath, urlParams)))
         .param("cache_object_id", UUID.randomUUID())
         .query(RepositoryCacheEntry.class)
@@ -187,13 +183,15 @@ public class RepositoryCacheEntryDao {
       UUID cacheObjectId,
       Long cacheObjectSize,
       String cacheObjectHash,
+      MediaType mimeType,
       Boolean isCached) {
 
     LOGGER.trace(
-        "updateCacheEntry - cacheObjectId: {}, cacheObjectHash: {}, cacheObjectHash: {}, isCached: {}",
+        "updateCacheEntry - cacheObjectId: {}, cacheObjectHash: {}, cacheObjectHash: {}, mimeType: {}, isCached: {}",
         cacheObjectId,
         cacheObjectHash,
         cacheObjectHash,
+        mimeType,
         isCached);
 
     if (Boolean.TRUE.equals(isCached)) {
@@ -209,6 +207,7 @@ public class RepositoryCacheEntryDao {
           .param("cache_object_id", cacheObjectId)
           .param("cache_object_size", cacheObjectSize)
           .param("cache_object_hash", cacheObjectHash)
+          .param("mime_type", mimeType)
           .param("is_cached", isCached)
           .param("cached_at", Timestamp.from(Instant.now()))
           .update();
@@ -249,12 +248,12 @@ public class RepositoryCacheEntryDao {
         .toUriString();
   }
 
-  private String getObjectFilePath(String url) {
+  private String getObjectFilePath(String urlPath) {
 
     try {
       MessageDigest digest;
       digest = MessageDigest.getInstance("SHA-256");
-      byte[] encodedHash = digest.digest((url).getBytes());
+      byte[] encodedHash = digest.digest((urlPath).getBytes());
       String sha256Hex = Hex.encodeHexString(encodedHash);
 
       String level1Dir = sha256Hex.substring(0, 1);
