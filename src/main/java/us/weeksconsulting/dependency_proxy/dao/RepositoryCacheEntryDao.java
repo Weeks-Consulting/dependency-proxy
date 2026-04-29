@@ -59,7 +59,7 @@ public class RepositoryCacheEntryDao {
         .stream();
   }
 
-  public RepositoryCacheEntry getCacheEntry(
+  private RepositoryCacheEntry getCacheEntry(
       String repositoryType,
       String repositoryName,
       String urlPath,
@@ -86,23 +86,7 @@ public class RepositoryCacheEntryDao {
         .param("repository_name", repositoryName)
         .param("url_path", serializeUrl(urlPath, urlParams))
         .query(RepositoryCacheEntry.class)
-        .optional().orElse(null);
-  }
-
-  public RepositoryCacheEntry getCacheEntry(UUID cacheObjectId) {
-
-    LOGGER.trace("getCacheEntry - cacheObjectId: {}", cacheObjectId);
-
-    return this.jdbcClient
-        .sql("""
-            select *
-              from repository_cache
-              where cache_object_id = :cache_object_id
-              for key share
-            """)
-        .param("cache_object_id", cacheObjectId)
-        .query(RepositoryCacheEntry.class)
-        .optional().orElse(null);
+        .single();
   }
 
   public Optional<RepositoryCacheEntry> getCacheEntryForUpdate(UUID cacheObjectId) {
@@ -120,19 +104,19 @@ public class RepositoryCacheEntryDao {
         .optional();
   }
 
-  public void lockCacheEntryForDelete(UUID cacheObjectId) {
+  public Boolean lockCacheEntryForDelete(UUID cacheObjectId) {
     LOGGER.trace("lockCacheEntryForDelete - cacheObjectId: {}", cacheObjectId);
 
-    this.jdbcClient
+    return this.jdbcClient
         .sql("""
-            select *
+            select true
               from repository_cache
               where cache_object_id = :cache_object_id
               for update
             """)
         .param("cache_object_id", cacheObjectId)
-        .query(RepositoryCacheEntry.class)
-        .optional().orElse(null);
+        .query(Boolean.class)
+        .optional().orElse(Boolean.FALSE);
   }
 
   public RepositoryCacheEntry insertGetCacheEntry(

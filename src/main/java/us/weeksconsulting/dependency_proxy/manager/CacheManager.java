@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import us.weeksconsulting.dependency_proxy.config.ApplicationConfig;
 import us.weeksconsulting.dependency_proxy.config.model.Repository;
@@ -71,7 +72,12 @@ public class CacheManager {
 
     LOGGER.trace("repositoryCacheEntry: {}", repositoryCacheEntry);
 
-    String url = repo.getBaseUrl() + urlPath;
+    String url = UriComponentsBuilder
+        .fromUriString(repo.getBaseUrl())
+        .path(urlPath)
+        .queryParams(urlParams)
+        .toUriString();
+
     LOGGER.trace("url: {}", url);
 
     if (isExcluded(urlPath, repo)) {

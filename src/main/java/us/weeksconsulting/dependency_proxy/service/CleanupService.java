@@ -60,37 +60,45 @@ public class CleanupService {
             LOGGER.debug("Cleaning up repo: {}.{}", repoType, repoName);
             hasRows.set(true);
           }
-          LOGGER.debug("Cleaning up url: {}", repoCacheEntry.getUrlPath());
+
+          String cacheObjectPath = repoCacheEntry.getCacheObjectPath();
+          UUID cacheObjectId = repoCacheEntry.getCacheObjectId();
+          String urlPath = repoCacheEntry.getUrlPath();
+
+          LOGGER.debug("Cleaning up url: {}", urlPath);
 
           // Acquire an exclusive lock on the row to be deleted before removing the file.
           LOGGER.trace("Waiting for lock on {}", repoCacheEntry.getCacheObjectId());
-          repoDao.lockCacheEntryForDelete(repoCacheEntry.getCacheObjectId());
-          LOGGER.trace("Acquired lock on {}", repoCacheEntry.getCacheObjectId());
+          Boolean acquiredLock = repoDao.lockCacheEntryForDelete(repoCacheEntry.getCacheObjectId());
 
-          try {
-            String cacheObjectPath = repoCacheEntry.getCacheObjectPath();
-            UUID cacheObjectId = repoCacheEntry.getCacheObjectId();
-            switch (cacheType) {
-              case "local":
-                Path file = Paths.get(cacheLocation, cacheObjectPath, cacheObjectId.toString());
-                LOGGER.debug("Deleting {}", file);
-                Files.delete(file);
-                break;
-              case "s3":
-                String s3ObjectKey = cacheObjectPath + "/" + cacheObjectId;
-                LOGGER.debug("Deleting s3://{}/{}", cacheLocation, s3ObjectKey);
-                s3Template.deleteObject(cacheLocation, s3ObjectKey);
-                break;
-              default:
-                LOGGER.error("Unknown storage type.");
-                break;
+          if (Boolean.TRUE.equals(acquiredLock)) {
+            LOGGER.trace("Acquired lock on {}", repoCacheEntry.getCacheObjectId());
+            try {
+              switch (cacheType) {
+                case "local":
+                  Path file = Paths.get(cacheLocation, cacheObjectPath, cacheObjectId.toString());
+                  LOGGER.debug("Deleting {}", file);
+                  Files.delete(file);
+                  break;
+                case "s3":
+                  String s3ObjectKey = cacheObjectPath + "/" + cacheObjectId;
+                  LOGGER.debug("Deleting s3://{}/{}", cacheLocation, s3ObjectKey);
+                  s3Template.deleteObject(cacheLocation, s3ObjectKey);
+                  break;
+                default:
+                  LOGGER.error("Unknown storage type.");
+                  break;
+              }
+              // Delete cache entry once file has been removed and release the lock
+              repoDao.deleteCacheEntry(repoCacheEntry.getCacheObjectId());
+            } catch (IOException | S3Exception exception) {
+              LOGGER.error("Failed to cleanup file, marking as not cached", exception);
+              repoDao.updateCacheEntry(cacheObjectId, null, null, null, Boolean.FALSE);
             }
-          } catch (IOException | S3Exception exception) {
-            LOGGER.error("Failed to cleanup file, marking as not cached", exception);
+          } else {
+            // If your running multiple instances this probably means one of the other instances already cleaned up the file.
+            LOGGER.trace("Failed to Acquire Lock on {}", repoCacheEntry.getCacheObjectId());
           }
-
-          // Delete cache entry once file has been removed and release the lock
-          repoDao.deleteCacheEntry(repoCacheEntry.getCacheObjectId());
 
         });
 
