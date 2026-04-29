@@ -95,7 +95,7 @@ public class FileService {
         writeCache(inputStream, outputStream, cacheObjectPath, cacheObjectId, mimeType);
       } else {
         LOGGER.trace("Failed Acquiring Lock For - {}", cacheObjectId);
-        skipCache(inputStream);
+        IOUtils.consume(inputStream);
       }
     } catch (S3Exception | IOException exception) {
       // If the incoming piped input stream get's closed prematurely
@@ -114,12 +114,8 @@ public class FileService {
     LOGGER.trace("writeFileAsync finished");
   }
 
-  private void skipCache(InputStream inputStream) throws IOException {
-    IOUtils.consume(inputStream);
-  }
-
-  private void writeCache(InputStream inputStream,
-      OutputStream outputStream,
+  private void writeCache(
+      InputStream inputStream,
       String cacheObjectPath,
       UUID cacheObjectId,
       MediaType mimeType) throws IOException {
@@ -136,7 +132,8 @@ public class FileService {
           Files.createDirectories(cacheObjectDirectoryPath);
 
           File cacheObjectFile = Path.of(storageLocation, cacheObjectPath, cacheObjectId.toString()).toFile();
-          cacheObjectFile.createNewFile();
+          boolean createdFile = cacheObjectFile.createNewFile();
+          LOGGER.trace("createdFile: {}", createdFile);
           Files.copy(digestInputStream, cacheObjectFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
           cacheFileLength = cacheObjectFile.length();
           break;
