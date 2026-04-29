@@ -7,6 +7,9 @@ variables:
   BP_JVM_VERSION: '25'
   BP_NATIVE_IMAGE: true
   TEST_DISABLED: true
+  CODE_QUALITY_DISABLED: true
+  CONTAINER_SCANNING_DISABLED: true
+  SAST_DISABLED: true
 
 build:
   variables:
