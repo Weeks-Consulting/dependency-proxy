@@ -2,8 +2,8 @@ include:
   - template: Auto-DevOps.gitlab-ci.yml
 
 variables:
-  # CI_DEBUG_SERVICES: true
-  # CI_DEBUG_TRACE: true
+  CI_DEBUG_SERVICES: true
+  CI_DEBUG_TRACE: true
   BP_JVM_VERSION: '25'
   BP_NATIVE_IMAGE: 'true'
 
