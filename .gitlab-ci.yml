@@ -15,7 +15,13 @@ variables:
   # SAST_DISABLED: true
   AUTO_DEVOPS_BUILD_IMAGE_CNB_BUILDER: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/paketobuildpacks/builder-noble-java-tiny:latest
   AUTO_DEVOPS_BUILD_IMAGE_CNB_LIFECYCLE_IMAGE: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/buildpacksio/lifecycle:0.21.8
-  AUTO_DEVOPS_BUILD_IMAGE_FORWARDED_CI_VARIABLES: BP_JVM_VERSION,BP_NATIVE_IMAGE,BP_MAVEN_ACTIVE_PROFILES  
+  AUTO_DEVOPS_BUILD_IMAGE_FORWARDED_CI_VARIABLES: BP_JVM_VERSION,BP_NATIVE_IMAGE,BP_MAVEN_ACTIVE_PROFILES
+
+default:
+  cache:
+    key: test-cache
+    paths:
+      - cache/
 
 build:
   services:
@@ -31,7 +37,7 @@ test:
   variables:    
     SPRING_DATASOURCE_USERNAME: dependency_proxy
     SPRING_DATASOURCE_PASSWORD: dependency_proxy
-    CACHE_PATH: ${APP_CACHE_DIR}
+    CACHE_PATH: ${CI_PROJECT_DIR}/cache/
   services:
     - name: postgres:18-alpine
       alias: postgresql
