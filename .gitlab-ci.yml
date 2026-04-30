@@ -19,7 +19,7 @@ variables:
 
 default:
   cache:
-    key: test-cache
+    key: build-cache
     paths:
       - cache/
 
