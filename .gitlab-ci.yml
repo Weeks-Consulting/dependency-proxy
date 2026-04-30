@@ -2,9 +2,10 @@ include:
   - template: Auto-DevOps.gitlab-ci.yml
 
 variables:
+  APP_JAVA_VERSION: '25'
   # CI_DEBUG_SERVICES: true
   # CI_DEBUG_TRACE: true
-  BP_JVM_VERSION: '25'
+  BP_JVM_VERSION: ${APP_JAVA_VERSION}
   BP_NATIVE_IMAGE: true
   BP_MAVEN_ACTIVE_PROFILES: native
   # TEST_DISABLED: true
@@ -27,6 +28,7 @@ build:
     - sed -i 's~--builder "$builder"~--builder "$builder" --docker-host=unix:///run/user/1000/docker.sock~' /build/build.sh
 test:
   variables:
+    java.runtime.version: ${APP_JAVA_VERSION}
     SPRING_DATASOURCE_USERNAME: dependency_proxy
     SPRING_DATASOURCE_PASSWORD: dependency_proxy
   services:
@@ -35,7 +37,8 @@ test:
       variables:
         POSTGRES_DB: dependency_proxy
         POSTGRES_USER: dependency_proxy
-        POSTGRES_PASSWORD: dependency_proxy      
+        POSTGRES_PASSWORD: dependency_proxy
+  image:             
 
 code_quality:
   variables:
