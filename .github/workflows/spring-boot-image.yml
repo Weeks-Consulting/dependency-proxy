@@ -1,0 +1,10 @@
+name: Spring Boot Image Build and Deploy
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          ./mvnw clean spring-boot:build-image -Pnative  -DskipTests
