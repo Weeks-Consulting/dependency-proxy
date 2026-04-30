@@ -147,7 +147,7 @@
                 <configuration>
                     <image>
                         <name>${spring-boot.build-image.imageName}</name>
-                        <tags>${project.version}</tags>
+                        <tags>${spring-boot.build-image.tags}</tags>
                         <env>
                             <BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
                         </env>
