@@ -9,7 +9,7 @@ jobs:
           contents: read
           packages: write
           attestations: write
-          id-token: write    
+          id-token: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -32,7 +32,7 @@ jobs:
         run: |
           MVN_RELEASE_VERSION="$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)" && \
           SPRING_BOOT_IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}" && \
-          SPRING_BOOT_IMAGE_TAGS="${MVN_RELEASE_VERSION,,},latest" && \          
+          SPRING_BOOT_IMAGE_TAGS="${MVN_RELEASE_VERSION,,},latest" && \
           echo "Publishing ${SPRING_BOOT_IMAGE_NAME} to Tags ${SPRING_BOOT_IMAGE_NAME}" && \
           ./mvnw spring-boot:build-image --batch-mode --no-transfer-progress \
             -DskipTests \
