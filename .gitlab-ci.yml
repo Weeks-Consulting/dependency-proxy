@@ -3,6 +3,7 @@ include:
 
 variables:
   APP_JAVA_VERSION: '25'
+  APP_CACHE_DIR: /cache
   # CI_DEBUG_SERVICES: true
   # CI_DEBUG_TRACE: true
   BP_JVM_VERSION: ${APP_JAVA_VERSION}
@@ -30,6 +31,7 @@ test:
   variables:    
     SPRING_DATASOURCE_USERNAME: dependency_proxy
     SPRING_DATASOURCE_PASSWORD: dependency_proxy
+    CACHE_PATH: ${APP_CACHE_DIR}
   services:
     - name: postgres:18-alpine
       alias: postgresql
