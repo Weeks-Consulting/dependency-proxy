@@ -40,7 +40,7 @@ test:
     CACHE_PATH: ${CI_PROJECT_DIR}/cache/
   services:
     - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/postgres:18-alpine
-      alias: postgresql
+      alias: postgres
       variables:
         POSTGRES_DB: dependency_proxy
         POSTGRES_USER: dependency_proxy
