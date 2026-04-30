@@ -29,6 +29,7 @@
     </scm>
     <properties>
         <java.version>25</java.version>
+        <spring-boot.build-image.imageName>registry.gitlab.weeksconsulting.us/weeks-consulting/${project.artifactId}:${project.version}</spring-boot.build-image.imageName>
     </properties>
     <dependencies>
         <dependency>
@@ -144,7 +145,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <image>
-                        <name>registry.gitlab.weeksconsulting.us/weeks-consulting/${project.artifactId}:${project.version}</name>
+                        <name>${spring-boot.build-image.imageName}</name>
                         <env>
                             <BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
                         </env>
