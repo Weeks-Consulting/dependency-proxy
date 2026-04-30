@@ -39,6 +39,8 @@ test:
         POSTGRES_PASSWORD: dependency_proxy
   before_script:
     - echo "java.runtime.version=${APP_JAVA_VERSION}" > ${CI_PROJECT_DIR}/system.properties
+  after_script:
+    - ls -lh ${CI_PROJECT_DIR}
 
 code_quality:
   variables:
