@@ -30,9 +30,9 @@ jobs:
 
       - name: Build Spring Boot Image
         run: |
-          MVN_RELEASE_VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout) && \
-          SPRING_BOOT_IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,} && \
-          SPRING_BOOT_IMAGE_TAGS=${MVN_RELEASE_VERSION,,},latest && \          
+          MVN_RELEASE_VERSION="$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)" && \
+          SPRING_BOOT_IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}" && \
+          SPRING_BOOT_IMAGE_TAGS="${MVN_RELEASE_VERSION,,},latest" && \          
           echo "Publishing ${SPRING_BOOT_IMAGE_NAME} to Tags ${SPRING_BOOT_IMAGE_NAME}" && \
           ./mvnw spring-boot:build-image --batch-mode --no-transfer-progress \
             -DskipTests \
