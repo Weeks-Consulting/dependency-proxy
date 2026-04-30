@@ -39,7 +39,7 @@ test:
     SPRING_DATASOURCE_PASSWORD: dependency_proxy
     CACHE_PATH: ${CI_PROJECT_DIR}/cache/
   services:
-    - name: postgres:18-alpine
+    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/postgres:18-alpine
       alias: postgresql
       variables:
         POSTGRES_DB: dependency_proxy
@@ -48,7 +48,7 @@ test:
   before_script:
     - echo "java.runtime.version=${APP_JAVA_VERSION}" > ${CI_PROJECT_DIR}/system.properties
   after_script:
-    - find /tmp -ls
+    - echo "Finished"
 
 code_quality:
   variables:
