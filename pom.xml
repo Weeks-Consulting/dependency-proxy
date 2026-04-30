@@ -29,8 +29,7 @@
     </scm>
     <properties>
         <java.version>25</java.version>
-        <spring-boot.build-image.imageName>registry.gitlab.weeksconsulting.us/weeks-consulting/${project.artifactId}</spring-boot.build-image.imageName>
-        <spring-boot.build-image.tags>${project.version}</spring-boot.build-image.tags>
+        <spring-boot.build-image.imageName>registry.gitlab.weeksconsulting.us/weeks-consulting/${project.artifactId}:${project.version}</spring-boot.build-image.imageName>
     </properties>
     <dependencies>
         <dependency>
