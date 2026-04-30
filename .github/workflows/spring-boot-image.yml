@@ -32,11 +32,12 @@ jobs:
         run: |
           MVN_RELEASE_VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout) && \
           SPRING_BOOT_IMAGE_BASE=ghcr.io/${GITHUB_REPOSITORY,,} && \
-          SPRING_BOOT_IMAGE_TAG=${MVN_RELEASE_VERSION,,} && \
-          SPRING_BOOT_IMAGE_NAME=${SPRING_BOOT_IMAGE_BASE}:${SPRING_BOOT_IMAGE_TAG} && \
+          SPRING_BOOT_IMAGE_TAGS=${MVN_RELEASE_VERSION,,},latest && \
+          SPRING_BOOT_IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,} && \
           echo "Publishing ${SPRING_BOOT_IMAGE_NAME}" && \
           ./mvnw spring-boot:build-image --batch-mode --no-transfer-progress \
             -DskipTests \
             -Ddocker.publishRegistry.url=ghcr.io \
             -Dspring-boot.build-image.publish=true \
-            -Dspring-boot.build-image.imageName=${SPRING_BOOT_IMAGE_NAME}
+            -Dspring-boot.build-image.imageName=${SPRING_BOOT_IMAGE_NAME} \
+            -Dspring-boot.build-image.tags= ${SPRING_BOOT_IMAGE_TAGS}
