@@ -22,10 +22,21 @@ build:
       alias: docker
       command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
       variables:
-        DOCKERD_ROOTLESS_ROOTLESSKIT_NET: slirp4netns
+        DOCKERD_ROOTLESS_ROOTLESSKIT_NET: slirp4netns      
   # Hot patching the build script since it doesn't have a native way to set docker host for the build container.
   before_script:
     - sed -i 's~--builder "$builder"~--builder "$builder" --docker-host=unix:///run/user/1000/docker.sock~' /build/build.sh
+test:
+  variables:
+    SPRING_DATASOURCE_USERNAME: dependency_proxy
+    SPRING_DATASOURCE_PASSWORD: dependency_proxy
+  services:
+    - name: postgres:18-alpine
+      alias: postgresql
+      variables:
+        POSTGRES_DB: dependency_proxy
+        POSTGRES_USER: dependency_proxy
+        POSTGRES_PASSWORD: dependency_proxy      
 
 code_quality:
   variables:

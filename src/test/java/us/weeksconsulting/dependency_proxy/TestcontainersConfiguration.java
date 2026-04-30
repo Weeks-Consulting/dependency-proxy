@@ -1,5 +1,6 @@
 package us.weeksconsulting.dependency_proxy;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -14,6 +15,7 @@ import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
 
 @TestConfiguration(proxyBeanMethods = false)
+@ConditionalOnExpression("'${CI:false}' == 'false'") // Check to see if we're running local or in CI/CD
 class TestcontainersConfiguration {
 
   @Bean
