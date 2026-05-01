@@ -1,66 +1,11 @@
-include:
-  - template: Auto-DevOps.gitlab-ci.yml
-
-variables:
-  APP_JAVA_VERSION: '25'
-  APP_CACHE_DIR: /cache
-  # CI_DEBUG_SERVICES: true
-  # CI_DEBUG_TRACE: true
-  BP_JVM_VERSION: ${APP_JAVA_VERSION}
-  BP_NATIVE_IMAGE: true
-  BP_MAVEN_ACTIVE_PROFILES: native
-  # TEST_DISABLED: true
-  # CODE_QUALITY_DISABLED: true
-  # CONTAINER_SCANNING_DISABLED: true
-  # SAST_DISABLED: true
-  AUTO_DEVOPS_BUILD_IMAGE_CNB_BUILDER: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/paketobuildpacks/builder-noble-java-tiny:latest
-  AUTO_DEVOPS_BUILD_IMAGE_CNB_LIFECYCLE_IMAGE: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/buildpacksio/lifecycle:0.21.8
-  AUTO_DEVOPS_BUILD_IMAGE_FORWARDED_CI_VARIABLES: BP_JVM_VERSION,BP_NATIVE_IMAGE,BP_MAVEN_ACTIVE_PROFILES
-
 default:
-  cache:
-    key: build-cache
-    paths:
-      - cache/
+  image: debian:13-slim
+  # services:
+  #   - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29-dind-rootless
+  #     alias: docker
+  # before_script: |
+  #   apt-get install -y docker-cli openjdk-25-jdk-headless
 
 build:
-  services:
-    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29-dind-rootless
-      alias: docker
-      command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
-      variables:
-        DOCKERD_ROOTLESS_ROOTLESSKIT_NET: slirp4netns      
-  # Hot patching the build script since it doesn't have a native way to set docker host for the build container.
-  before_script:
-    - sed -i 's~--builder "$builder"~--builder "$builder" --docker-host=unix:///run/user/1000/docker.sock~' /build/build.sh
-test:
-  variables:    
-    SPRING_DATASOURCE_USERNAME: dependency_proxy
-    SPRING_DATASOURCE_PASSWORD: dependency_proxy
-    CACHE_PATH: ${CI_PROJECT_DIR}/cache/
-  services:
-    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/postgres:18-alpine
-      alias: postgres
-      variables:
-        POSTGRES_DB: dependency_proxy
-        POSTGRES_USER: dependency_proxy
-        POSTGRES_PASSWORD: dependency_proxy
-  before_script:
-    - echo "java.runtime.version=${APP_JAVA_VERSION}" > ${CI_PROJECT_DIR}/system.properties
-  after_script:
-    - echo "Finished"
-
-code_quality:
-  variables:
-      DOCKER_SOCKET_PATH: /run/user/1000/docker.sock
-      CODECLIMATE_PREFIX: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}
-      CODECLIMATE_REGISTRY: ${CI_DEPENDENCY_PROXY_SERVER}
-      CODECLIMATE_REGISTRY_USERNAME: ${CI_DEPENDENCY_PROXY_USER}
-      CODECLIMATE_REGISTRY_PASSWORD: ${CI_DEPENDENCY_PROXY_PASSWORD}
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29
-  services:
-    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29-dind-rootless
-      alias: docker
-      command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
-      variables:
-        DOCKERD_ROOTLESS_ROOTLESSKIT_NET: slirp4netns
+  script: |
+    echo "Hello World"
