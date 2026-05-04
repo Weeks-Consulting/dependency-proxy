@@ -1,4 +1,6 @@
 variables:
+  CI_DEBUG_SERVICES: true
+  # CI_DEBUG_TRACE: true
   # Versions
   ALPINE_VERSION: 3.23
   DOCKER_DIND_VERSION: 29
