@@ -145,9 +145,9 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- <docker>
+                    <docker>
                         <bindHostToBuilder>true</bindHostToBuilder>
-                    </docker> -->
+                    </docker>
                     <image>
                         <name>${spring-boot.build-image.imageName}</name>
                         <tags>${spring-boot.build-image.tags}</tags>
