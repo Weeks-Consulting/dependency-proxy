@@ -1,5 +1,16 @@
 package us.weeksconsulting.dependency_proxy.dao;
 
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.CACHED_AT;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.CACHE_OBJECT_HASH;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.CACHE_OBJECT_ID;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.CACHE_OBJECT_PATH;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.CACHE_OBJECT_SIZE;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.IS_CACHED;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.MIME_TYPE;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.REPOSITORY_NAME;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.REPOSITORY_TYPE;
+import static us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry.URL_PATH;
+
 import java.io.File;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -42,6 +53,12 @@ public class RepositoryCacheEntryDao {
       String repositoryName,
       Duration cacheTTL) {
 
+    LOGGER.trace(
+        "getExpiredCacheEntries - repositoryType: {}, repositoryName: {}, cacheTTL: {}",
+        repositoryType,
+        repositoryName,
+        cacheTTL);
+
     return this.jdbcClient
         .sql("""
             select *
@@ -52,8 +69,8 @@ public class RepositoryCacheEntryDao {
                 and cached_at < current_timestamp - (:cache_ttl * interval '1 second')
               for key share skip locked
             """)
-        .param("repository_type", repositoryType)
-        .param("repository_name", repositoryName)
+        .param(REPOSITORY_TYPE, repositoryType)
+        .param(REPOSITORY_NAME, repositoryName)
         .param("cache_ttl", cacheTTL.getSeconds())
         .query(RepositoryCacheEntry.class)
         .stream();
@@ -82,15 +99,17 @@ public class RepositoryCacheEntryDao {
                 and url_path = :url_path
               for key share
             """)
-        .param("repository_type", repositoryType)
-        .param("repository_name", repositoryName)
-        .param("url_path", serializeUrl(urlPath, urlParams))
+        .param(REPOSITORY_TYPE, repositoryType)
+        .param(REPOSITORY_NAME, repositoryName)
+        .param(URL_PATH, serializeUrl(urlPath, urlParams))
         .query(RepositoryCacheEntry.class)
         .single();
   }
 
   public Boolean getCacheEntryForUpdate(UUID cacheObjectId) {
-    LOGGER.trace("getCacheEntryForUpdate - cacheObjectId: {}", cacheObjectId);
+    LOGGER.trace(
+        "getCacheEntryForUpdate - cacheObjectId: {}",
+        cacheObjectId);
 
     return this.jdbcClient
         .sql("""
@@ -99,13 +118,16 @@ public class RepositoryCacheEntryDao {
               where cache_object_id = :cache_object_id
               for no key update skip locked
             """)
-        .param("cache_object_id", cacheObjectId)
+        .param(CACHE_OBJECT_ID, cacheObjectId)
         .query(Boolean.class)
         .optional().orElse(Boolean.FALSE);
   }
 
   public Boolean lockCacheEntryForDelete(UUID cacheObjectId) {
-    LOGGER.trace("lockCacheEntryForDelete - cacheObjectId: {}", cacheObjectId);
+
+    LOGGER.trace(
+        "lockCacheEntryForDelete - cacheObjectId: {}",
+        cacheObjectId);
 
     return this.jdbcClient
         .sql("""
@@ -114,7 +136,7 @@ public class RepositoryCacheEntryDao {
               where cache_object_id = :cache_object_id
               for update
             """)
-        .param("cache_object_id", cacheObjectId)
+        .param(CACHE_OBJECT_ID, cacheObjectId)
         .query(Boolean.class)
         .optional().orElse(Boolean.FALSE);
   }
@@ -152,11 +174,11 @@ public class RepositoryCacheEntryDao {
             on conflict do nothing
             returning *
             """)
-        .param("repository_type", repositoryType)
-        .param("repository_name", repositoryName)
-        .param("url_path", serializeUrl(urlPath, urlParams))
-        .param("cache_object_path", getObjectFilePath(serializeUrl(urlPath, urlParams)))
-        .param("cache_object_id", UUID.randomUUID())
+        .param(REPOSITORY_TYPE, repositoryType)
+        .param(REPOSITORY_NAME, repositoryName)
+        .param(URL_PATH, serializeUrl(urlPath, urlParams))
+        .param(CACHE_OBJECT_PATH, getObjectFilePath(serializeUrl(urlPath, urlParams)))
+        .param(CACHE_OBJECT_ID, UUID.randomUUID())
         .query(RepositoryCacheEntry.class)
         .optional()
         .orElseGet(() -> getCacheEntry(repositoryType, repositoryName, urlPath, urlParams));
@@ -188,12 +210,12 @@ public class RepositoryCacheEntryDao {
                     cached_at = :cached_at
                 where cache_object_id = :cache_object_id
               """)
-          .param("cache_object_id", cacheObjectId)
-          .param("cache_object_size", cacheObjectSize)
-          .param("cache_object_hash", cacheObjectHash)
-          .param("mime_type", mimeType)
-          .param("is_cached", isCached)
-          .param("cached_at", Timestamp.from(Instant.now()))
+          .param(CACHE_OBJECT_ID, cacheObjectId)
+          .param(CACHE_OBJECT_SIZE, cacheObjectSize)
+          .param(CACHE_OBJECT_HASH, cacheObjectHash)
+          .param(MIME_TYPE, mimeType)
+          .param(IS_CACHED, isCached)
+          .param(CACHED_AT, Timestamp.from(Instant.now()))
           .update();
     } else {
       this.jdbcClient
@@ -205,7 +227,7 @@ public class RepositoryCacheEntryDao {
                     cached_at = null
                 where cache_object_id = :cache_object_id
               """)
-          .param("cache_object_id", cacheObjectId)
+          .param(CACHE_OBJECT_ID, cacheObjectId)
           .update();
     }
 
@@ -213,7 +235,9 @@ public class RepositoryCacheEntryDao {
 
   public void deleteCacheEntry(UUID cacheObjectId) {
 
-    LOGGER.trace("deleteCacheEntry - cacheObjectId: {}", cacheObjectId);
+    LOGGER.trace(
+        "deleteCacheEntry - cacheObjectId: {}",
+        cacheObjectId);
 
     this.jdbcClient
         .sql("""
@@ -221,15 +245,12 @@ public class RepositoryCacheEntryDao {
               from repository_cache
               where cache_object_id = :cache_object_id
             """)
-        .param("cache_object_id", cacheObjectId)
+        .param(CACHE_OBJECT_ID, cacheObjectId)
         .update();
   }
 
   private String serializeUrl(String urlPath, MultiValueMap<String, String> urlParams) {
-    return UriComponentsBuilder
-        .fromPath(urlPath)
-        .queryParams(urlParams)
-        .toUriString();
+    return UriComponentsBuilder.fromPath(urlPath).queryParams(urlParams).toUriString();
   }
 
   private String getObjectFilePath(String urlPath) {

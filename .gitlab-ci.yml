@@ -1,11 +1,49 @@
-default:
-  image: debian:13-slim
-  # services:
-  #   - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:29-dind-rootless
-  #     alias: docker
-  # before_script: |
-  #   apt-get install -y docker-cli openjdk-25-jdk-headless
+variables:
+  # Versions
+  ALPINE_VERSION: 3.23
+  DOCKER_DIND_VERSION: 29
+  POSTGRES_VERSION: 18
+  JDK_VERSION: 25
+  # Docker Settings
+  DOCKER_HOST: tcp://docker:2376
+  DOCKER_TLS_CERTDIR: /certs
+  DOCKER_TLS_VERIFY: 1
+  DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
 
-build:
+default:
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:${ALPINE_VERSION}
+  services:
+    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:${DOCKER_DIND_VERSION}-dind-rootless
+      alias: docker
+  before_script: |
+    apk -q update
+    apk -q add docker-cli openjdk${JDK_VERSION}-jdk
+
+stages:
+  - test
+  - build
+
+test_job:
+  stage: test
+  variables:
+    SPRING_DATASOURCE_USERNAME: dependency_proxy
+    SPRING_DATASOURCE_PASSWORD: dependency_proxy
+  services:
+    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/postgres:${POSTGRES_VERSION}-alpine
+      alias: postgres
+      variables:
+        POSTGRES_DB: dependency_proxy
+        POSTGRES_USER: dependency_proxy
+        POSTGRES_PASSWORD: dependency_proxy
   script: |
-    echo "Hello World"
+     ./mvnw test
+
+build_job:
+  stage: build
+  script: |
+    ./mvnw spring-boot:build-image --batch-mode --no-transfer-progress -DskipTests \
+      -Dspring-boot.build-image.publish="true" \
+      -Ddocker.publishRegistry.username=${CI_REGISTRY_USER} \
+      -Ddocker.publishRegistry.password=${CI_REGISTRY_PASSWORD} \
+      -Ddocker.publishRegistry.url=${CI_REGISTRY} \
+      -Dspring-boot.build-image.imageName=${CI_REGISTRY_IMAGE}

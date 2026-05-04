@@ -29,7 +29,8 @@
     </scm>
     <properties>
         <java.version>25</java.version>
-        <spring-boot.build-image.imageName>registry.gitlab.weeksconsulting.us/weeks-consulting/${project.artifactId}:${project.version}</spring-boot.build-image.imageName>
+        <spring-boot.build-image.imageName>
+            registry.gitlab.weeksconsulting.us/weeks-consulting/${project.artifactId}:${project.version}</spring-boot.build-image.imageName>
     </properties>
     <dependencies>
         <dependency>
@@ -144,12 +145,18 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <docker>
+                        <bindHostToBuilder>true</bindHostToBuilder>
+                    </docker>
                     <image>
                         <name>${spring-boot.build-image.imageName}</name>
                         <tags>${spring-boot.build-image.tags}</tags>
                         <env>
                             <BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
                         </env>
+                        <bindings>
+                            <binding>/certs:/certs</binding>
+                        </bindings>
                     </image>
                 </configuration>
             </plugin>

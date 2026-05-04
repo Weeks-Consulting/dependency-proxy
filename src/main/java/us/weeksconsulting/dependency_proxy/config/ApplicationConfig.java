@@ -18,8 +18,14 @@ public class ApplicationConfig {
   @NestedConfigurationProperty
   private final Repositories repositories;
 
-  public ApplicationConfig(Storage storage, Repositories repositories) {
-    LOGGER.debug("ApplicationConfig: storage: {}, repositories: {}", storage, repositories);
+  public ApplicationConfig(
+      Storage storage,
+      Repositories repositories) {
+
+    LOGGER.debug(
+        "ApplicationConfig: storage: {}, repositories: {}",
+        storage, repositories);
+
     this.storage = storage;
     this.repositories = repositories;
   }

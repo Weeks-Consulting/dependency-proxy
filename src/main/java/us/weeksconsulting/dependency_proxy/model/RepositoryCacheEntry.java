@@ -8,6 +8,17 @@ import org.springframework.http.MediaType;
 // Ignore rule about having too many parameters since this represents a database row.
 @SuppressWarnings("java:S107")
 public class RepositoryCacheEntry {
+  public static final String REPOSITORY_TYPE = "repository_type";
+  public static final String REPOSITORY_NAME = "repository_name";
+  public static final String URL_PATH = "url_path";
+  public static final String MIME_TYPE = "mime_type";
+  public static final String CACHE_OBJECT_PATH = "cache_object_path";
+  public static final String CACHE_OBJECT_ID = "cache_object_id";
+  public static final String CACHE_OBJECT_SIZE = "cache_object_size";
+  public static final String CACHE_OBJECT_HASH = "cache_object_hash";
+  public static final String IS_CACHED = "is_cached";
+  public static final String CACHED_AT = "cached_at";
+
   private final String repositoryType;
   private final String repositoryName;
   private final String urlPath;
@@ -84,8 +95,10 @@ public class RepositoryCacheEntry {
 
   @Override
   public String toString() {
-    return "RepositoryCacheEntry [repositoryType=" + repositoryType + ", repositoryName=" + repositoryName + ", urlPath="
-        + urlPath + ", mimeType=" + mimeType + ", cacheObjectPath=" + cacheObjectPath + ", cacheObjectId=" + cacheObjectId
+    return "RepositoryCacheEntry [repositoryType=" + repositoryType + ", repositoryName=" + repositoryName
+        + ", urlPath="
+        + urlPath + ", mimeType=" + mimeType + ", cacheObjectPath=" + cacheObjectPath + ", cacheObjectId="
+        + cacheObjectId
         + ", cacheObjectSize=" + cacheObjectSize + ", cacheObjectHash=" + cacheObjectHash + ", isCached=" + isCached
         + ", cachedAt=" + cachedAt + "]";
   }
