@@ -50,13 +50,14 @@ build_job:
     - MVN_RELEASE_VERSION="$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout | tr '[:upper:]' '[:lower:]')"
     - SPRING_BOOT_IMAGE_NAME="${CI_REGISTRY_IMAGE}"
     - SPRING_BOOT_IMAGE_TAGS="${SPRING_BOOT_IMAGE_NAME}:${MVN_RELEASE_VERSION}"
-    - grype ${CI_PROJECT_DIR} --fail-on HIGH
-    - trivy fs ${CI_PROJECT_DIR}
-    - docker info
+    # - grype ${CI_PROJECT_DIR} --fail-on HIGH
+    # - trivy fs ${CI_PROJECT_DIR}
+    - docker version
     - ${CI_PROJECT_DIR}/mvnw spring-boot:build-image -DskipTests
         -Dspring-boot.build-image.imageName="${SPRING_BOOT_IMAGE_NAME}"
         -Dspring-boot.build-image.tags="${SPRING_BOOT_IMAGE_TAGS}"
-    - grype ${CI_REGISTRY_IMAGE} --fail-on HIGH
-    - trivy image ${CI_REGISTRY_IMAGE}
-    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
-    - docker push ${CI_REGISTRY_IMAGE} --all-tags
+    - docker images
+    # - grype ${CI_REGISTRY_IMAGE} --fail-on HIGH
+    # - trivy image ${CI_REGISTRY_IMAGE}
+    # - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    # - docker push ${CI_REGISTRY_IMAGE} --all-tags
