@@ -47,7 +47,6 @@ stages:
 build_job:
   stage: build
   script:
-    - sleep 300000
     - MVN_RELEASE_VERSION="$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout | tr '[:upper:]' '[:lower:]')"
     - SPRING_BOOT_IMAGE_NAME="${CI_REGISTRY_IMAGE}"
     - SPRING_BOOT_IMAGE_TAGS="${SPRING_BOOT_IMAGE_NAME}:${MVN_RELEASE_VERSION}"
