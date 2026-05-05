@@ -31,10 +31,12 @@ class TestcontainersConfiguration {
   @Bean
   DynamicPropertyRegistrar postgresPropertiesRegistrar(PostgreSQLContainer postgresContainer) {
     return registry -> {
-      registry.add("spring.datasource.url", postgresContainer::getJdbcUrl);
-      registry.add("spring.datasource.username", postgresContainer::getUsername);
-      registry.add("spring.datasource.password", postgresContainer::getPassword);
-      registry.add("spring.datasource.configuration.maximum-pool-size", () -> 5);
+      registry.add("PROXY_DB_HOST", postgresContainer::getHost);
+      registry.add("PROXY_DB_PORT", postgresContainer::getFirstMappedPort);
+      registry.add("PROXY_DB_DATABASE", postgresContainer::getDatabaseName);
+      registry.add("PROXY_DB_USERNAME", postgresContainer::getUsername);
+      registry.add("PROXY_DB_PASSWORD", postgresContainer::getPassword);
+      registry.add("PROXY_DB_POOL_SIZE", () -> 5);
     };
   }
 
@@ -51,10 +53,10 @@ class TestcontainersConfiguration {
   @Profile("s3")
   DynamicPropertyRegistrar s3PropertiesRegistrar(S3MockContainer s3MockContainer) {
     return registry -> {
-      registry.add("spring.cloud.aws.s3.endpoint", s3MockContainer::getHttpEndpoint);
-      registry.add("spring.cloud.aws.s3.path-style-access-enabled", () -> "true");
-      registry.add("spring.cloud.aws.credentials.access-key", () -> "foo");
-      registry.add("spring.cloud.aws.credentials.secret-key", () -> "bar");
+      registry.add("PROXY_S3_ENDPOINT", s3MockContainer::getHttpEndpoint);
+      registry.add("PROXY_S3_PATH_STYLE_ACCESS_ENABLED", () -> "true");
+      registry.add("PROXY_S3_ACCESS_KEY", () -> "foo");
+      registry.add("PROXY_S3_SECRET_KEY", () -> "bar");
     };
   }
 

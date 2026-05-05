@@ -12,40 +12,38 @@ services:
     volumes:
       - db_data:/var/lib/postgresql
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-dependency_proxy}
-      POSTGRES_USER: ${POSTGRES_USER:-dependency_proxy}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dependency_proxy}
+      POSTGRES_DB: ${PROXY_DB_DATABASE:-postgres}
+      POSTGRES_USER: ${PROXY_DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${PROXY_DB_PASSWORD:-postgres}
 
   webapp:
-    image: weeksconsulting-us/dependency-proxy:0.0.1-SNAPSHOT
+    image: ghcr.io/weeks-consulting/dependency-proxy:0.0.1
     ports:
       - 8080:8080
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-dependency_proxy}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dependency_proxy}
-      LOGGING_LEVEL_US_WEEKSCONSULTING: DEBUG
+      PROXY_DB_DATABASE: ${PROXY_DB_DATABASE:-postgres}
+      PROXY_DB_USERNAME: ${PROXY_DB_USERNAME:-postgres}      
+      PROXY_DB_PASSWORD: ${PROXY_DB_PASSWORD:-postgres}
+      PROXY_LOG_LEVEL: DEBUG
       SPRING_APPLICATION_JSON: |
         {
           "application": {
-            "cleanup": {
-              "schedule": "10s"
-              },
             "repositories": {
               "raw": {
                 "apache": {
                   "base_url": "https://dlcdn.apache.org",
-                  "cache_ttl": "10s"
+                  "cache_ttl": "60s"
                 },
-                "nodejs": {
-                  "base_url": "https://dist.nodejs.org",
-                  "cache_ttl": "10s"
+                "npm": {
+                  "base_url": "https://registry.npmjs.org",
+                  "cache_ttl": "1m"
                 },
                 "debian": {
                   "base_url": "http://deb.debian.org",
-                  "cache_ttl": "10s",
+                  "cache_ttl": "60000ms",
                   "excludes": [
                     "/debian/dists/",
                     "/debian-security/dists/"

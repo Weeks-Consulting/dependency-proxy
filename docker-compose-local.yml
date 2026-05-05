@@ -12,5 +12,5 @@ services:
     volumes:
       - cache_data:/data
     environment:
-      CACHE_STORAGE_TYPE: ${CACHE_STORAGE_TYPE:-local}
-      CACHE_STORAGE_LOCATION: ${CACHE_STORAGE_LOCATION:-/data}
+      PROXY_STORAGE_TYPE: ${PROXY_STORAGE_TYPE:-local}
+      PROXY_STORAGE_PATH: ${PROXY_STORAGE_PATH:-/data}

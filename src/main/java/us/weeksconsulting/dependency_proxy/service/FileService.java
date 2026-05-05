@@ -11,6 +11,7 @@ import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.commons.codec.binary.Hex;
@@ -38,12 +39,14 @@ public class FileService {
   private final S3Template s3Template;
   private final RepositoryCacheEntryDao repoDao;
   private final String storageType;
-  private final String storageLocation;
+  private final String storagePath;
+  private final String storageBucket;
 
   public FileService(RepositoryCacheEntryDao repoDao, ApplicationConfig appConfig, S3Template s3Template) {
     this.repoDao = repoDao;
     this.storageType = appConfig.getStorage().getType();
-    this.storageLocation = appConfig.getStorage().getLocation();
+    this.storagePath = appConfig.getStorage().getPath();
+    this.storageBucket = appConfig.getStorage().getBucket();
     this.s3Template = s3Template;
   }
 
@@ -52,16 +55,16 @@ public class FileService {
       UUID cacheObjectId) throws IOException {
     switch (storageType) {
       case "local":
-        Path cacheDirectory = Path.of(storageLocation + File.separator + cacheObjectPath);
+        Path cacheDirectory = Path.of(storagePath + File.separator + cacheObjectPath);
         File cacheFile = new File(cacheDirectory + File.separator + cacheObjectId);
 
         LOGGER.trace("cacheFile length: {}", cacheFile.length());
         LOGGER.trace("Returning cacheFile from {}", cacheFile.getAbsolutePath());
         return new FileInputStream(cacheFile);
       case "s3":
-        String s3ObjectKey = cacheObjectPath.replace(File.separatorChar, '/') + '/' + cacheObjectId.toString();
+        String s3ObjectKey = Optional.ofNullable(storagePath).orElse("") + cacheObjectPath.replace(File.separatorChar, '/') + '/' + cacheObjectId.toString();
         LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
-        S3Resource s3Resource = s3Template.download(storageLocation, s3ObjectKey);
+        S3Resource s3Resource = s3Template.download(storageBucket, s3ObjectKey);
         LOGGER.trace("cacheFile length: {}", s3Resource.contentLength());
 
         // Ignore rule about hard coded URL's since you have to include the path
@@ -130,19 +133,19 @@ public class FileService {
 
       switch (storageType) {
         case "local":
-          Path cacheObjectDirectoryPath = Path.of(storageLocation, cacheObjectPath);
+          Path cacheObjectDirectoryPath = Path.of(storagePath, cacheObjectPath);
           Files.createDirectories(cacheObjectDirectoryPath);
 
-          File cacheObjectFile = Path.of(storageLocation, cacheObjectPath, cacheObjectId.toString()).toFile();
+          File cacheObjectFile = Path.of(storagePath, cacheObjectPath, cacheObjectId.toString()).toFile();
           boolean createdFile = cacheObjectFile.createNewFile();
           LOGGER.trace("createdFile: {}", createdFile);
           Files.copy(digestInputStream, cacheObjectFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
           cacheFileLength = cacheObjectFile.length();
           break;
         case "s3":
-          String s3Bucket = storageLocation;
+          String s3Bucket = storageBucket;
           LOGGER.trace("s3Bucket: {}", s3Bucket);
-          String s3ObjectKey = cacheObjectPath.replace(File.separatorChar, '/') + "/" + cacheObjectId.toString();
+          String s3ObjectKey = Optional.ofNullable(storagePath).orElse("") + cacheObjectPath.replace(File.separatorChar, '/') + "/" + cacheObjectId.toString();
           LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
 
           S3Resource s3Resource = s3Template.upload(s3Bucket, s3ObjectKey, digestInputStream);

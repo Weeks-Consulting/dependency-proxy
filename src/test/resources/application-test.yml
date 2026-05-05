@@ -15,11 +15,11 @@ logging:
     rollingpolicy:
       max-history: 0
   level:
-    # org.springframework: TRACE
+    org.springframework: TRACE
     # org.springframework.jdbc: TRACE
     # io.awspring.cloud: TRACE
     # software.amazon.awssdk: TRACE
-    us.weeksconsulting: DEBUG
+    us.weeksconsulting: TRACE
 
 application:
   cleanup:

@@ -20,8 +20,8 @@ services:
       init-s3-storage:
         condition: service_completed_successfully
     environment:
-      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-foo}
-      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-bar}
+      RUSTFS_ACCESS_KEY: ${PROXY_S3_ACCESS_KEY:-foo}
+      RUSTFS_SECRET_KEY: ${PROXY_S3_SECRET_KEY:-bar}
 
   init-s3-bucket:
     image: rustfs/rc:latest
@@ -33,22 +33,24 @@ services:
       - /bin/sh
       - -c
       - |
-        rc alias set local http://s3:9000 $${RUSTFS_ACCESS_KEY} $${RUSTFS_SECRET_KEY} && \
-        rc mb local/$${S3_BUCKET}
+        rc alias set local http://s3:9000 $${PROXY_S3_ACCESS_KEY} $${PROXY_S3_SECRET_KEY} && \
+        rc mb local/$${PROXY_S3_BUCKET}
     environment:
-      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-foo}
-      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-bar}
-      S3_BUCKET: ${S3_BUCKET:-dependency-proxy-bucket}
+      PROXY_S3_ACCESS_KEY: ${PROXY_S3_ACCESS_KEY:-foo}
+      PROXY_S3_SECRET_KEY: ${PROXY_S3_SECRET_KEY:-bar}
+      PROXY_S3_BUCKET: ${PROXY_S3_BUCKET:-dependency-proxy-bucket}
 
   webapp:
     depends_on:
       init-s3-bucket:
         condition: service_completed_successfully  
     environment:
-      S3_ENDPOINT: http://s3:9000
-      S3_REGION: us-east-1
-      S3_PATH_STYLE_ACCESS_ENABLED: true
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-foo}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-bar}
-      CACHE_STORAGE_TYPE: ${CACHE_STORAGE_TYPE:-s3}
-      CACHE_STORAGE_LOCATION: ${S3_BUCKET:-dependency-proxy-bucket}
+      PROXY_S3_ENDPOINT: http://s3:9000
+      PROXY_S3_REGION: us-east-1
+      PROXY_S3_PATH_STYLE_ACCESS_ENABLED: true
+      PROXY_S3_ACCESS_KEY: ${PROXY_S3_ACCESS_KEY:-foo}
+      PROXY_S3_SECRET_KEY: ${PROXY_S3_SECRET_KEY:-bar}
+      PROXY_STORAGE_TYPE: ${PROXY_STORAGE_TYPE:-s3}
+      PROXY_STORAGE_PATH: ${PROXY_STORAGE_PATH:-dependency-proxy/}
+      PROXY_S3_BUCKET: ${PROXY_S3_BUCKET:-dependency-proxy-bucket}
+      

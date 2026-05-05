@@ -11,7 +11,7 @@
     </parent>
     <groupId>us.weeksconsulting</groupId>
     <artifactId>dependency-proxy</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
     <name />
     <description />
     <url />
@@ -29,8 +29,7 @@
     </scm>
     <properties>
         <java.version>25</java.version>
-        <spring-boot.build-image.imageName>
-            registry.gitlab.weeksconsulting.us/weeks-consulting/${project.artifactId}:${project.version}</spring-boot.build-image.imageName>
+        <proxy.image.name>ghcr.io/weeks-consulting/${project.artifactId}:${project.version}</proxy.image.name>
     </properties>
     <dependencies>
         <dependency>
@@ -150,8 +149,8 @@
                         <bindHostToBuilder>true</bindHostToBuilder>
                     </docker>
                     <image>
-                        <name>${spring-boot.build-image.imageName}</name>
-                        <tags>${spring-boot.build-image.tags}</tags>
+                        <name>${proxy.image.name}</name>
+                        <tags>${proxy.image.tag}</tags>
                         <env>
                             <BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
                         </env>

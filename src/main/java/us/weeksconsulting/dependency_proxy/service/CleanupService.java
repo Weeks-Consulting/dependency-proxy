@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import io.awspring.cloud.s3.S3Template;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -45,7 +47,7 @@ public class CleanupService {
   public void cleanupTask() {
     LOGGER.trace("cleanupTask started");
     String cacheType = storage.getType();
-    String cacheLocation = storage.getLocation();
+    String cachePath = storage.getPath();
 
     rawRepos.forEach((repoName, repoConfig) -> {
       String repoType = "raw";
@@ -63,9 +65,10 @@ public class CleanupService {
 
           String cacheObjectPath = repoCacheEntry.getCacheObjectPath();
           UUID cacheObjectId = repoCacheEntry.getCacheObjectId();
-          String urlPath = repoCacheEntry.getUrlPath();
+          String url = UriComponentsBuilder.fromPath(repoConfig.getBaseUrl()).path(repoCacheEntry.getUrlPath())
+              .toUriString();
 
-          LOGGER.debug("Cleaning up url: {}", urlPath);
+          LOGGER.debug("Cleaning up url: {}", url);
 
           // Acquire an exclusive lock on the row to be deleted before removing the file.
           LOGGER.trace("Waiting for lock on {}", repoCacheEntry.getCacheObjectId());
@@ -76,14 +79,16 @@ public class CleanupService {
             try {
               switch (cacheType) {
                 case "local":
-                  Path file = Paths.get(cacheLocation, cacheObjectPath, cacheObjectId.toString());
+                  Path file = Paths.get(cachePath, cacheObjectPath, cacheObjectId.toString());
                   LOGGER.debug("Deleting {}", file);
                   Files.delete(file);
                   break;
                 case "s3":
-                  String s3ObjectKey = cacheObjectPath + "/" + cacheObjectId;
-                  LOGGER.debug("Deleting s3://{}/{}", cacheLocation, s3ObjectKey);
-                  s3Template.deleteObject(cacheLocation, s3ObjectKey);
+                  String s3Bucket = storage.getBucket();
+                  String s3ObjectKey = Optional.ofNullable(cachePath).orElse("") + cacheObjectPath + "/"
+                      + cacheObjectId;
+                  LOGGER.debug("Deleting s3://{}/{}", s3Bucket, s3ObjectKey);
+                  s3Template.deleteObject(s3Bucket, s3ObjectKey);
                   break;
                 default:
                   LOGGER.error("Unknown storage type.");
@@ -96,7 +101,8 @@ public class CleanupService {
               repoDao.updateCacheEntry(cacheObjectId, null, null, null, Boolean.FALSE);
             }
           } else {
-            // If your running multiple instances this probably means one of the other instances already cleaned up the file.
+            // If your running multiple instances this probably means one of the other
+            // instances already cleaned up the file.
             LOGGER.trace("Failed to Acquire Lock on {}", repoCacheEntry.getCacheObjectId());
           }
 
