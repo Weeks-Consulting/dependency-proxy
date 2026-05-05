@@ -36,3 +36,4 @@ build/
 storage/
 *.log
 *.gz
+.gitlab-ci-local/

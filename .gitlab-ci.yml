@@ -1,36 +1,22 @@
+include:
+  - component: $CI_SERVER_FQDN/gitlab-components/docker/docker-service@v29.0.1
+
 variables:
   # CI_DEBUG_SERVICES: true
   # CI_DEBUG_TRACE: true
   # Versions
-  ALPINE_VERSION: 3.23
-  DOCKER_DIND_VERSION: 29
   POSTGRES_VERSION: 18
   JDK_VERSION: 25
-  # Docker Settings
-  DOCKER_HOST: tcp://docker:2376
-  DOCKER_TLS_CERTDIR: /certs
-  DOCKER_TLS_VERIFY: 1
-  DOCKER_CERT_PATH: "${DOCKER_TLS_CERTDIR}/client"
   # Maven Settings
   MAVEN_ARGS: --batch-mode --no-transfer-progress
 
 default:
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:${ALPINE_VERSION}
-  services:
-    - name: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/docker:${DOCKER_DIND_VERSION}-dind-rootless
-      alias: docker
-      entrypoint: [ "sh", "-c", "dockerd-entrypoint.sh ${DOCKER_OPTS}" ]
-  before_script:
-    - apk -q update
-    - apk -q add docker-cli grype curl openjdk${JDK_VERSION}-jdk
-    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.70.0
-
-stages:
-  - test
-  - build
+  image: ${CI_REGISTRY}/common/build-images:alpine-java-jdk-${JDK_VERSION}
 
 test_job:
   stage: test
+  extends:
+    - .docker-service
   variables:
     SPRING_DATASOURCE_USERNAME: dependency_proxy
     SPRING_DATASOURCE_PASSWORD: dependency_proxy
@@ -46,6 +32,8 @@ test_job:
 
 build_job:
   stage: build
+  extends:
+    - .docker-service
   script:
     - MVN_RELEASE_VERSION="$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout | tr '[:upper:]' '[:lower:]')"
     - SPRING_BOOT_IMAGE_NAME="${CI_REGISTRY_IMAGE}"
