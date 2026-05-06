@@ -7,11 +7,9 @@ on:
 
 jobs:
   cleanup:
-    name: ghcr.io cleanup action
+    name: Cleanup Untagged Images
     runs-on: ubuntu-latest
     permissions:
       packages: write    
     steps:
       - uses: dataaxiom/ghcr-cleanup-action@v1
-        with:
-          dry-run: true
