@@ -35,19 +35,28 @@ services:
               "raw": {
                 "apache": {
                   "base_url": "https://dlcdn.apache.org",
-                  "cache_ttl": "24h"
+                  "cache_ttl": "10m"
                 },
                 "npm": {
                   "base_url": "https://registry.npmjs.org",
-                  "cache_ttl": "1d"
+                  "cache_ttl": "10m"
                 },
                 "debian": {
                   "base_url": "http://deb.debian.org",
-                  "cache_ttl": "1440m",
+                  "cache_ttl": "10m",
                   "excludes": [
                     "/debian/dists/",
                     "/debian-security/dists/"
-                    ]          
+                  ]
+                },
+                "rocky": {
+                  "base_url": "http://dl.rockylinux.org",
+                  "cache_ttl": "10m",
+                  "excludes": [
+                    "/pub/rocky/9/BaseOS/x86_64/os/repodata/",
+                    "/pub/rocky/9/AppStream/x86_64/os/repodata/",
+                    "/pub/rocky/9/extras/x86_64/os/repodata/"
+                  ]
                 }
               }
             }
