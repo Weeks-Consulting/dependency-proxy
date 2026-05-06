@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
 
@@ -18,7 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -51,8 +51,7 @@ public class CacheManager {
   public ResponseEntity<StreamingResponseBody> get(
       String repositoryType,
       String repositoryName,
-      String urlPath,
-      MultiValueMap<String, String> urlParams)
+      String urlPath)
       throws IOException {
 
     Repository repo = rawRepositories.get(repositoryName);
@@ -67,17 +66,12 @@ public class CacheManager {
     RepositoryCacheEntry repositoryCacheEntry = repoDao.insertGetCacheEntry(
         repositoryType,
         repositoryName,
-        urlPath,
-        urlParams);
+        urlPath);
 
     LOGGER.trace("repositoryCacheEntry: {}", repositoryCacheEntry);
 
-    String url = UriComponentsBuilder
-        .fromUriString(repo.getBaseUrl())
-        .path(urlPath)
-        .queryParams(urlParams)
-        .toUriString();
-
+    // Since we are proxying the request we do not encode the incoming URL
+    URI url = UriComponentsBuilder.fromUriString(repo.getBaseUrl() + urlPath).build(true).toUri();
     LOGGER.trace("url: {}", url);
 
     if (isExcluded(urlPath, repo)) {
@@ -90,7 +84,7 @@ public class CacheManager {
   }
 
   private ResponseEntity<StreamingResponseBody> getFromCache(
-      String url,
+      URI url,
       RepositoryCacheEntry repositoryCacheEntry)
       throws IOException {
     boolean isCached = repositoryCacheEntry.isCached();
@@ -125,7 +119,7 @@ public class CacheManager {
 
   }
 
-  private ResponseEntity<StreamingResponseBody> getBypassCache(String url)
+  private ResponseEntity<StreamingResponseBody> getBypassCache(URI url)
       throws IOException {
 
     ClientHttpResponse response = getFromUrl(url);
@@ -140,7 +134,8 @@ public class CacheManager {
         .body(outputStream -> inputStream.transferTo(outputStream));
   }
 
-  private ClientHttpResponse getFromUrl(String url) {
+  private ClientHttpResponse getFromUrl(URI url) {
+    LOGGER.trace("getFromUrl -> url: {}", url);
     return RestClient.create().get().uri(url).exchange((request, response) -> response, false);
 
   }

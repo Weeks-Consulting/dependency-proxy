@@ -79,15 +79,13 @@ public class RepositoryCacheEntryDao {
   private RepositoryCacheEntry getCacheEntry(
       String repositoryType,
       String repositoryName,
-      String urlPath,
-      MultiValueMap<String, String> urlParams) {
+      String urlPath) {
 
     LOGGER.trace(
-        "getCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
+        "getCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}",
         repositoryType,
         repositoryName,
-        urlPath,
-        urlParams);
+        urlPath);
 
     return this.jdbcClient
         .sql("""
@@ -101,7 +99,7 @@ public class RepositoryCacheEntryDao {
             """)
         .param(REPOSITORY_TYPE, repositoryType)
         .param(REPOSITORY_NAME, repositoryName)
-        .param(URL_PATH, serializeUrl(urlPath, urlParams))
+        .param(URL_PATH, urlPath)
         .query(RepositoryCacheEntry.class)
         .single();
   }
@@ -144,15 +142,13 @@ public class RepositoryCacheEntryDao {
   public RepositoryCacheEntry insertGetCacheEntry(
       String repositoryType,
       String repositoryName,
-      String urlPath,
-      MultiValueMap<String, String> urlParams) {
+      String urlPath) {
 
     LOGGER.trace(
-        "insertGetCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}, urlParams: {}",
+        "insertGetCacheEntry - repositoryType: {}, repositoryName: {}, urlPath: {}",
         repositoryType,
         repositoryName,
-        urlPath,
-        urlParams);
+        urlPath);
 
     return this.jdbcClient
         .sql("""
@@ -176,12 +172,12 @@ public class RepositoryCacheEntryDao {
             """)
         .param(REPOSITORY_TYPE, repositoryType)
         .param(REPOSITORY_NAME, repositoryName)
-        .param(URL_PATH, serializeUrl(urlPath, urlParams))
-        .param(CACHE_OBJECT_PATH, getObjectFilePath(serializeUrl(urlPath, urlParams)))
+        .param(URL_PATH, urlPath)
+        .param(CACHE_OBJECT_PATH, getObjectFilePath(urlPath))
         .param(CACHE_OBJECT_ID, UUID.randomUUID())
         .query(RepositoryCacheEntry.class)
         .optional()
-        .orElseGet(() -> getCacheEntry(repositoryType, repositoryName, urlPath, urlParams));
+        .orElseGet(() -> getCacheEntry(repositoryType, repositoryName, urlPath));
 
   }
 
@@ -247,10 +243,6 @@ public class RepositoryCacheEntryDao {
             """)
         .param(CACHE_OBJECT_ID, cacheObjectId)
         .update();
-  }
-
-  private String serializeUrl(String urlPath, MultiValueMap<String, String> urlParams) {
-    return UriComponentsBuilder.fromPath(urlPath).queryParams(urlParams).toUriString();
   }
 
   private String getObjectFilePath(String urlPath) {

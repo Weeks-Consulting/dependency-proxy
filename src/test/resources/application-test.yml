@@ -3,7 +3,7 @@ spring:
     # Get rid of annoying error on shutdown.
     exclude: org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
   devtools:
-    add-properties: false
+    # add-properties: false
 
 server:
   shutdown: immediate
@@ -15,26 +15,29 @@ logging:
     rollingpolicy:
       max-history: 0
   level:
-    org.springframework: TRACE
+    # org.springframework: TRACE
     # org.springframework.jdbc: TRACE
+    # org.springframework.web: TRACE
     # io.awspring.cloud: TRACE
     # software.amazon.awssdk: TRACE
     us.weeksconsulting: TRACE
+    us.weeksconsulting.dependency_proxy.service.CleanupService: INFO
+    us.weeksconsulting.dependency_proxy.dao.RepositoryCacheEntryDao: INFO
 
 application:
   cleanup:
-    schedule: 5s
+    schedule: 30s
   repositories:
     raw:
       apache:
         base_url: https://dlcdn.apache.org
         cache_ttl: 1m        
-      nodejs:
-        base_url: https://dist.nodejs.org
-        cache_ttl: 60s
+      npm:
+        base_url: https://registry.npmjs.org
+        cache_ttl: 1m
       debian:
         base_url: http://deb.debian.org
-        cache_ttl: 60000ms
+        cache_ttl: 1m
         excludes:
           - /debian/dists/
           - /debian-security/dists/
@@ -48,7 +51,7 @@ spring:
 application:
   storage:
     type: local
-    location: ./storage
+    path: ./storage
 
 ---
 spring:
@@ -59,4 +62,5 @@ spring:
 application:
   storage:
     type: s3
-    location: test-bucket
+    path: dependency-proxy/
+    bucket: test-bucket

@@ -35,15 +35,15 @@ services:
               "raw": {
                 "apache": {
                   "base_url": "https://dlcdn.apache.org",
-                  "cache_ttl": "60s"
+                  "cache_ttl": "24h"
                 },
                 "npm": {
                   "base_url": "https://registry.npmjs.org",
-                  "cache_ttl": "1m"
+                  "cache_ttl": "1d"
                 },
                 "debian": {
                   "base_url": "http://deb.debian.org",
-                  "cache_ttl": "60000ms",
+                  "cache_ttl": "1440m",
                   "excludes": [
                     "/debian/dists/",
                     "/debian-security/dists/"

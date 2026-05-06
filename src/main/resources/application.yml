@@ -42,8 +42,8 @@ logging:
 
 application:
   storage:
-    type: ${PROXY_STORAGE_TYPE:-local}
-    path: ${PROXY_STORAGE_PATH:-/data}
+    type: ${PROXY_STORAGE_TYPE:local}
+    path: ${PROXY_STORAGE_PATH:/data}
     bucket: ${PROXY_S3_BUCKET}
   cleanup:
     schedule: ${PROXY_CLEANUP_JOB_SCHEDULE:30m}

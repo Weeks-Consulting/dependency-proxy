@@ -62,7 +62,8 @@ public class FileService {
         LOGGER.trace("Returning cacheFile from {}", cacheFile.getAbsolutePath());
         return new FileInputStream(cacheFile);
       case "s3":
-        String s3ObjectKey = Optional.ofNullable(storagePath).orElse("") + cacheObjectPath.replace(File.separatorChar, '/') + '/' + cacheObjectId.toString();
+        String s3ObjectKey = Optional.ofNullable(storagePath).orElse("")
+            + cacheObjectPath.replace(File.separatorChar, '/') + '/' + cacheObjectId.toString();
         LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
         S3Resource s3Resource = s3Template.download(storageBucket, s3ObjectKey);
         LOGGER.trace("cacheFile length: {}", s3Resource.contentLength());
@@ -105,8 +106,9 @@ public class FileService {
     } catch (S3Exception | IOException exception) {
       // If the incoming piped input stream get's closed prematurely
       // assume the client disconnected mid download and abandon caching
+      // TODO - I don't really like how I had to do this.
       if (exception.getMessage().contains("Read end dead")
-          || exception.getCause().getMessage().contains("Read end dead")) {
+          || (exception.getCause() != null && exception.getCause().getMessage().contains("Read end dead"))) {
         LOGGER.warn("Client Download Interrupted");
       } else {
         LOGGER.error("Failed to Cache File", exception);
@@ -145,7 +147,8 @@ public class FileService {
         case "s3":
           String s3Bucket = storageBucket;
           LOGGER.trace("s3Bucket: {}", s3Bucket);
-          String s3ObjectKey = Optional.ofNullable(storagePath).orElse("") + cacheObjectPath.replace(File.separatorChar, '/') + "/" + cacheObjectId.toString();
+          String s3ObjectKey = Optional.ofNullable(storagePath).orElse("")
+              + cacheObjectPath.replace(File.separatorChar, '/') + "/" + cacheObjectId.toString();
           LOGGER.trace("s3ObjectKey: {}", s3ObjectKey);
 
           S3Resource s3Resource = s3Template.upload(s3Bucket, s3ObjectKey, digestInputStream);

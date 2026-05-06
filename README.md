@@ -18,6 +18,10 @@ docker compose down --volumes --remove-orphans
 * ~~Store file size in database~~
 * ~~Implement pass through streaming so the client isn't waiting for the download to finish on the server before it an download~~
 * ~~Implement S3 Cache~~
+* Implement improved cache exclusions
+    * Add a ttl for cache exclusions so they still can benefit from caching but for a much shorter duration
+    * Add regular expression based exclusions - needed for NPM
+* Implement regular expression based cache exclusions - Needed for NPM
 * Implement file integrity checks
     * Verify files the database thinks are cached actually are
     * Verify files exist before attempting to download
@@ -31,37 +35,38 @@ docker compose down --volumes --remove-orphans
 ```shell
 
 # Run Test Instance using local storage
-./mvnw spring-boot:test-run -Dspring-boot.run.profiles=test,local
+./mvnw clean spring-boot:test-run -Dspring-boot.run.profiles=test,local
 
 # Run Test Instance using s3 storage
-./mvnw spring-boot:test-run -Dspring-boot.run.profiles=test,s3
+./mvnw clean spring-boot:test-run -Dspring-boot.run.profiles=test,s3
 ```
 
 ### Local Test Commands
 ```shell
 # 7mb file - ee16b346867fd028abd4e50b06d0d348
-time curl -v 'http://localhost:8080/raw/apache/nifi/2.9.0/minifi-toolkit-2.9.0-bin.zip' | md5sum
+time curl -v 'http://localhost:8080/proxy/raw/apache/nifi/2.9.0/minifi-toolkit-2.9.0-bin.zip' | md5sum
 
 # 200mb file - 5fcf2bcce742799a23db9e45cdddbec3
-time curl -v 'http://localhost:8080/raw/apache/nifi/2.9.0/minifi-2.9.0-bin.zip' | md5sum
+time curl -v 'http://localhost:8080/proxy/raw/apache/nifi/2.9.0/minifi-2.9.0-bin.zip' | md5sum
 
 # 800mb file - bdd1d4dc244a54ce6a46e4cb406beae3
-time curl -v 'http://localhost:8080/raw/apache/nifi/2.9.0/nifi-2.9.0-bin.zip' | md5sum
+time curl -v 'http://localhost:8080/proxy/raw/apache/nifi/2.9.0/nifi-2.9.0-bin.zip' | md5sum
 
 # Repo that doesn't exist
-time curl -v 'http://localhost:8080/raw/fake_repo/unknown_file.zip' | md5sum
+time curl -v 'http://localhost:8080/proxy/raw/fake_repo/unknown_file.zip'
 
 # File that doesn't exist
-time curl -v 'http://localhost:8080/raw/apache/unknown_file.zip' | md5sum
+time curl -v 'http://localhost:8080/proxy/raw/apache/unknown_file.zip'
 
-# TODO - Doesn't Work
-time curl -v http://localhost:8080/raw/npm/@isaacs%2ffs-minipass
-```
+# NPM Package with Complicated URL - 4645a1bd80161e333bf6442f11916a14
+time curl -v 'http://localhost:8080/proxy/raw/npm/@isaacs%2ffs-minipass' | md5sum
 
-### Test Debian Package Cache in Docker Container
-```shell
-# Run Container
-docker run -it --rm --add-host=host.docker.internal:host-gateway debian bash -c 'sed -i "s~deb.debian.org~host.docker.internal:8080/raw/debian~g" /etc/apt/sources.list.d/debian.sources && time sh -c "apt update && apt dist-upgrade -y && apt install openjdk-25-jdk -y" && exit'
+# Test something from the NPM Registry - Using `--no-audit` as the proxy doesn't support post requests
+npm config set registry=http://localhost:8080/proxy/raw/npm
+npx --verbose --no-audit hello-world-npm
+
+# Debian Packages
+docker run -it --rm --add-host=host.docker.internal:host-gateway debian bash -c 'sed -i "s~deb.debian.org~host.docker.internal:8080/proxy/raw/debian~g" /etc/apt/sources.list.d/debian.sources && time sh -c "apt update && apt dist-upgrade -y && apt install openjdk-25-jdk -y" && exit'
 ```
 
 ### Build
