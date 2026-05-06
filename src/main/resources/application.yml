@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: dependency-proxy
+
+  cloud:
+    aws:
+      s3:
+        region: ${PROXY_S3_REGION:us-east-1}
+        endpoint: ${PROXY_S3_ENDPOINT:https://s3.us-east-1.amazonaws.com}
+        path-style-access-enabled: ${PROXY_S3_PATH_STYLE_ACCESS_ENABLED:false}
+      credentials:
+        access-key: ${PROXY_S3_ACCESS_KEY}
+        secret-key: ${PROXY_S3_SECRET_KEY}
+
+
+  datasource:
+    url: jdbc:postgresql://${PROXY_DB_HOST:postgres}:${PROXY_DB_PORT:5432}/${PROXY_DB_DATABASE:postgres}
+    username: ${PROXY_DB_USERNAME}
+    password: ${PROXY_DB_PASSWORD}
+    configuration:
+      maximum-pool-size: ${PROXY_DB_POOL_SIZE:20}
+
+  mvc:
+    async:
+      request-timeout: ${PROXY_ASYNC_REQUEST_TIMEOUT:300000}
+
+server:
+  # Don't return error messages to client
+  error:
+    include-message: always
+    include-binding-errors: never
+    include-stacktrace: never
+
+  threads:
+    virtual:
+      enabled: true
+
+logging:
+  level:
+    org.springframework: INFO
+    us.weeksconsulting: ${PROXY_LOG_LEVEL:INFO}
+
+application:
+  storage:
+    type: ${PROXY_STORAGE_TYPE:local}
+    path: ${PROXY_STORAGE_PATH:/data}
+    bucket: ${PROXY_S3_BUCKET}
+  cleanup:
+    schedule: ${PROXY_CLEANUP_JOB_SCHEDULE:30m}

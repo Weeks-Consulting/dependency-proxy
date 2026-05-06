@@ -1,0 +1,56 @@
+services:
+  init-s3-storage:
+    image: busybox:latest
+    volumes:
+      - cache_data:/data
+    command: chown -R 10001:10001 /data
+
+  s3:
+    image: rustfs/rustfs:latest
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - 19000:9000
+    volumes:
+      - cache_data:/data
+    depends_on:
+      init-s3-storage:
+        condition: service_completed_successfully
+    environment:
+      RUSTFS_ACCESS_KEY: ${PROXY_S3_ACCESS_KEY:-foo}
+      RUSTFS_SECRET_KEY: ${PROXY_S3_SECRET_KEY:-bar}
+
+  init-s3-bucket:
+    image: rustfs/rc:latest
+    depends_on:
+      s3:
+        condition: service_healthy
+    entrypoint: []
+    command:
+      - /bin/sh
+      - -c
+      - |
+        rc alias set local http://s3:9000 $${PROXY_S3_ACCESS_KEY} $${PROXY_S3_SECRET_KEY} && \
+        rc mb local/$${PROXY_S3_BUCKET}
+    environment:
+      PROXY_S3_ACCESS_KEY: ${PROXY_S3_ACCESS_KEY:-foo}
+      PROXY_S3_SECRET_KEY: ${PROXY_S3_SECRET_KEY:-bar}
+      PROXY_S3_BUCKET: ${PROXY_S3_BUCKET:-dependency-proxy-bucket}
+
+  webapp:
+    depends_on:
+      init-s3-bucket:
+        condition: service_completed_successfully  
+    environment:
+      PROXY_S3_ENDPOINT: http://s3:9000
+      PROXY_S3_REGION: us-east-1
+      PROXY_S3_PATH_STYLE_ACCESS_ENABLED: true
+      PROXY_S3_ACCESS_KEY: ${PROXY_S3_ACCESS_KEY:-foo}
+      PROXY_S3_SECRET_KEY: ${PROXY_S3_SECRET_KEY:-bar}
+      PROXY_STORAGE_TYPE: ${PROXY_STORAGE_TYPE:-s3}
+      PROXY_STORAGE_PATH: ${PROXY_STORAGE_PATH:-dependency-proxy/}
+      PROXY_S3_BUCKET: ${PROXY_S3_BUCKET:-dependency-proxy-bucket}
+      

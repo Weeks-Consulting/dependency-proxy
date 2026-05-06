@@ -1,0 +1,117 @@
+package us.weeksconsulting.dependency_proxy.service;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import io.awspring.cloud.s3.S3Template;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import us.weeksconsulting.dependency_proxy.config.ApplicationConfig;
+import us.weeksconsulting.dependency_proxy.config.model.Repository;
+import us.weeksconsulting.dependency_proxy.config.model.Storage;
+import us.weeksconsulting.dependency_proxy.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry;
+
+@Service
+public class CleanupService {
+  private static final Logger LOGGER = LoggerFactory.getLogger(CleanupService.class);
+
+  private final S3Template s3Template;
+  private final RepositoryCacheEntryDao repoDao;
+  private final Map<String, Repository> rawRepos;
+  private final Storage storage;
+
+  public CleanupService(RepositoryCacheEntryDao repoDao, ApplicationConfig appConfig, S3Template s3Template) {
+    LOGGER.trace("CleanupService Constructed {}", this.hashCode());
+    this.repoDao = repoDao;
+    this.storage = appConfig.getStorage();
+    this.rawRepos = appConfig.getRepositories().getRawRepositories();
+    this.s3Template = s3Template;
+  }
+
+  @Scheduled(fixedDelayString = "${application.cleanup.schedule}", initialDelay = 30000)
+  @Transactional
+  public void cleanupTask() {
+    LOGGER.trace("cleanupTask started");
+    String cacheType = storage.getType();
+    String cachePath = storage.getPath();
+
+    rawRepos.forEach((repoName, repoConfig) -> {
+      String repoType = "raw";
+      try (Stream<RepositoryCacheEntry> repositoryCacheEntryStream = repoDao.getExpiredCacheEntries(
+          repoType,
+          repoName,
+          repoConfig.getCacheTTL())) {
+        AtomicReference<Boolean> hasRows = new AtomicReference<>();
+        hasRows.set(false);
+        repositoryCacheEntryStream.forEach(repoCacheEntry -> {
+          if (Boolean.FALSE.equals(hasRows.get())) {
+            LOGGER.debug("Cleaning up repo: {}.{}", repoType, repoName);
+            hasRows.set(true);
+          }
+
+          String cacheObjectPath = repoCacheEntry.getCacheObjectPath();
+          UUID cacheObjectId = repoCacheEntry.getCacheObjectId();
+          String url = UriComponentsBuilder.fromPath(repoConfig.getBaseUrl()).path(repoCacheEntry.getUrlPath())
+              .toUriString();
+
+          LOGGER.debug("Cleaning up url: {}", url);
+
+          // Acquire an exclusive lock on the row to be deleted before removing the file.
+          LOGGER.trace("Waiting for lock on {}", repoCacheEntry.getCacheObjectId());
+          Boolean acquiredLock = repoDao.lockCacheEntryForDelete(repoCacheEntry.getCacheObjectId());
+
+          if (Boolean.TRUE.equals(acquiredLock)) {
+            LOGGER.trace("Acquired lock on {}", repoCacheEntry.getCacheObjectId());
+            try {
+              switch (cacheType) {
+                case "local":
+                  Path file = Paths.get(cachePath, cacheObjectPath, cacheObjectId.toString());
+                  LOGGER.debug("Deleting {}", file);
+                  Files.delete(file);
+                  break;
+                case "s3":
+                  String s3Bucket = storage.getBucket();
+                  String s3ObjectKey = Optional.ofNullable(cachePath).orElse("") + cacheObjectPath + "/"
+                      + cacheObjectId;
+                  LOGGER.debug("Deleting s3://{}/{}", s3Bucket, s3ObjectKey);
+                  s3Template.deleteObject(s3Bucket, s3ObjectKey);
+                  break;
+                default:
+                  LOGGER.error("Unknown storage type.");
+                  break;
+              }
+              // Delete cache entry once file has been removed and release the lock
+              repoDao.deleteCacheEntry(repoCacheEntry.getCacheObjectId());
+            } catch (IOException | S3Exception exception) {
+              LOGGER.error("Failed to cleanup file, marking as not cached", exception);
+              repoDao.updateCacheEntry(cacheObjectId, null, null, null, Boolean.FALSE);
+            }
+          } else {
+            // If your running multiple instances this probably means one of the other
+            // instances already cleaned up the file.
+            LOGGER.trace("Failed to Acquire Lock on {}", repoCacheEntry.getCacheObjectId());
+          }
+
+        });
+
+      }
+
+    });
+
+    LOGGER.trace("cleanupTask finished");
+  }
+}

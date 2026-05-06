@@ -1,0 +1,16 @@
+services:
+  init-local-storage:
+    image: busybox:latest
+    volumes:
+      - cache_data:/data
+    command: chown -R 1002:1002 /data
+    
+  webapp:
+    depends_on:
+      init-local-storage:
+        condition: service_completed_successfully
+    volumes:
+      - cache_data:/data
+    environment:
+      PROXY_STORAGE_TYPE: ${PROXY_STORAGE_TYPE:-local}
+      PROXY_STORAGE_PATH: ${PROXY_STORAGE_PATH:-/data}

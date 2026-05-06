@@ -1,0 +1,73 @@
+spring:
+  autoconfigure:
+    # Get rid of annoying error on shutdown.
+    exclude: org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
+  devtools:
+    # add-properties: false
+
+server:
+  shutdown: immediate
+
+logging:
+  file:
+    name: spring-boot.log
+  logback:
+    rollingpolicy:
+      max-history: 0
+  level:
+    # org.springframework: TRACE
+    # org.springframework.jdbc: TRACE
+    # org.springframework.web: TRACE
+    # io.awspring.cloud: TRACE
+    # software.amazon.awssdk: TRACE
+    us.weeksconsulting: TRACE
+    us.weeksconsulting.dependency_proxy.service.CleanupService: INFO
+    us.weeksconsulting.dependency_proxy.dao.RepositoryCacheEntryDao: INFO
+
+application:
+  cleanup:
+    schedule: 1m
+  repositories:
+    raw:
+      apache:
+        base_url: https://dlcdn.apache.org
+        cache_ttl: 10m        
+      npm:
+        base_url: https://registry.npmjs.org
+        cache_ttl: 10m
+      debian:
+        base_url: http://deb.debian.org
+        cache_ttl: 10m
+        excludes:
+          - /debian/dists/
+          - /debian-security/dists/
+      rocky:
+        base_url: http://dl.rockylinux.org
+        cache_ttl: 10m
+        excludes:
+          - /pub/rocky/9/BaseOS/x86_64/os/repodata/
+          - /pub/rocky/9/AppStream/x86_64/os/repodata/
+          - /pub/rocky/9/extras/x86_64/os/repodata/
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+application:
+  storage:
+    type: local
+    path: ./storage
+
+---
+spring:
+  config:
+    activate:
+      on-profile: s3
+
+application:
+  storage:
+    type: s3
+    path: dependency-proxy/
+    bucket: test-bucket

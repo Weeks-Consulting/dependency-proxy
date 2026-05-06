@@ -1,0 +1,50 @@
+include:
+  - component: $CI_SERVER_FQDN/common/gitlab-components/docker@v1.0.1
+  - component: $CI_SERVER_FQDN/common/gitlab-components/postgres@v1.0.1
+
+variables:
+  # CI_DEBUG_SERVICES: true
+  # CI_DEBUG_TRACE: true
+  # Versions
+  POSTGRES_VERSION: 18
+  JDK_VERSION: 25
+  # Maven Settings
+  MAVEN_ARGS: --batch-mode --no-transfer-progress
+
+stages:
+  - test
+  - build
+
+default:
+  image: ${CI_REGISTRY}/common/build-images:alpine-java-jdk-${JDK_VERSION}
+
+test_job:
+  stage: test
+  extends:
+    - .postgres-service
+  variables:
+    PROXY_DB_HOST: postgres
+    PROXY_DB_DATABASE: ${POSTGRES_DB}
+    PROXY_DB_USERNAME: ${POSTGRES_USER}
+    PROXY_DB_PASSWORD: ${POSTGRES_PASSWORD}
+  script:
+    - env | grep '^PROXY_DB'
+    - ${CI_PROJECT_DIR}/mvnw test
+
+build_job:
+  stage: build
+  extends:
+    - .docker-service
+  script:
+    - MVN_RELEASE_VERSION="$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout | tr '[:upper:]' '[:lower:]')"
+    - PROXY_IMAGE_NAME="${CI_REGISTRY_IMAGE}"
+    - PROXY_IMAGE_TAG="${PROXY_IMAGE_NAME}:${MVN_RELEASE_VERSION}"
+    - grype ${CI_PROJECT_DIR} --fail-on HIGH
+    - trivy fs ${CI_PROJECT_DIR}
+    - ${CI_PROJECT_DIR}/mvnw spring-boot:build-image -DskipTests -Pnative
+        -Dproxy.image.name="${PROXY_IMAGE_NAME}"
+        -Dproxy.image.tag="${PROXY_IMAGE_TAG}"
+    - grype ${CI_REGISTRY_IMAGE} --fail-on HIGH
+    - trivy image ${CI_REGISTRY_IMAGE}
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - docker push ${CI_REGISTRY_IMAGE} --all-tags
