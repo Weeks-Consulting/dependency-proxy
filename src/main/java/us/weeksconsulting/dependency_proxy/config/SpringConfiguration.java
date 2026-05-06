@@ -4,12 +4,8 @@ import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.ServerConnector;
-// import org.apache.tomcat.util.buf.EncodedSolidusHandling;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.jetty.servlet.JettyServletWebServerFactory;
-// import org.springframework.boot.tomcat.TomcatConnectorCustomizer;
-// import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -27,7 +23,7 @@ public class SpringConfiguration {
     JettyServletWebServerFactory factory = new JettyServletWebServerFactory();
     factory.addServerCustomizers(server -> {
       for (Connector connector : server.getConnectors()) {
-        if (connector instanceof org.eclipse.jetty.server.ServerConnector) {
+        if (connector instanceof ServerConnector) {
           HttpConnectionFactory httpConnectionFactory = ((ServerConnector) connector)
               .getConnectionFactory(HttpConnectionFactory.class);
 

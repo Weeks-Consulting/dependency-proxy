@@ -66,7 +66,18 @@ npm config set registry=http://localhost:8080/proxy/raw/npm
 npx --verbose --no-audit hello-world-npm
 
 # Debian Packages
-docker run -it --rm --add-host=host.docker.internal:host-gateway debian bash -c 'sed -i "s~deb.debian.org~host.docker.internal:8080/proxy/raw/debian~g" /etc/apt/sources.list.d/debian.sources && time sh -c "apt update && apt dist-upgrade -y && apt install openjdk-25-jdk -y" && exit'
+docker run -it --rm --add-host=host.docker.internal:host-gateway debian bash -c '
+    sed -i "s~deb.debian.org~host.docker.internal:8080/proxy/raw/debian~g" /etc/apt/sources.list.d/debian.sources && \
+    time sh -c "apt update && apt dist-upgrade -y && apt install openjdk-25-jdk -y" && \
+    exit'
+
+# Rocky Packages
+docker run -it --rm --add-host=host.docker.internal:host-gateway rockylinux:9-minimal bash -c '
+    sed -i "s~http://dl.rockylinux.org~http://host.docker.internal:8080/proxy/raw/rocky~g" /etc/yum.repos.d/rocky* && \
+    sed -i "s~^mirrorlist~#mirrorlist~g" /etc/yum.repos.d/rocky* && \
+    sed -i "s~^#baseurl~baseurl~g" /etc/yum.repos.d/rocky* && \
+    time sh -c "microdnf  update -y && microdnf install -y java-25-openjdk-devel" && \
+    exit'
 ```
 
 ### Build

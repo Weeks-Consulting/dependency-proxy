@@ -11,6 +11,10 @@ variables:
   # Maven Settings
   MAVEN_ARGS: --batch-mode --no-transfer-progress
 
+stages:
+  - test
+  - build
+
 default:
   image: ${CI_REGISTRY}/common/build-images:alpine-java-jdk-${JDK_VERSION}
 
@@ -21,9 +25,10 @@ test_job:
   variables:
     PROXY_DB_HOST: postgres
     PROXY_DB_DATABASE: ${POSTGRES_DB}
-    PROXY_DB_USERNAME: ${POSTGRES_USERNAME}
+    PROXY_DB_USERNAME: ${POSTGRES_USER}
     PROXY_DB_PASSWORD: ${POSTGRES_PASSWORD}
   script:
+    - env | grep '^PROXY_DB'
     - ${CI_PROJECT_DIR}/mvnw test
 
 build_job:

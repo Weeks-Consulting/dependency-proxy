@@ -30,8 +30,6 @@ import org.springframework.aot.hint.annotation.RegisterReflection;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import us.weeksconsulting.dependency_proxy.exception.MissingHashAlgorithmException;
 import us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry;
