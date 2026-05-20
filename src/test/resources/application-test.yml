@@ -16,13 +16,12 @@ logging:
       max-history: 0
   level:
     # org.springframework: TRACE
-    # org.springframework.jdbc: TRACE
-    # org.springframework.web: TRACE
     # io.awspring.cloud: TRACE
-    # software.amazon.awssdk: TRACE
+    # org.springframework.transaction: TRACE
+    # org.springframework.jdbc: INFO
     us.weeksconsulting: TRACE
-    us.weeksconsulting.dependency_proxy.service.CleanupService: INFO
-    us.weeksconsulting.dependency_proxy.dao.RepositoryCacheEntryDao: INFO
+    # us.weeksconsulting.dependency_proxy.service: DEBUG
+    us.weeksconsulting.dependency_proxy.dao: DEBUG
 
 application:
   cleanup:
@@ -31,23 +30,20 @@ application:
     raw:
       apache:
         base_url: https://dlcdn.apache.org
-        cache_ttl: 10m        
+        cache_ttl: 1m
       npm:
         base_url: https://registry.npmjs.org
-        cache_ttl: 10m
+        cache_ttl: 1m
       debian:
         base_url: http://deb.debian.org
-        cache_ttl: 10m
+        cache_ttl: 1m
         excludes:
-          - /debian/dists/
-          - /debian-security/dists/
+          - "/*/dists/**"
       rocky:
         base_url: http://dl.rockylinux.org
-        cache_ttl: 10m
+        cache_ttl: 1m
         excludes:
-          - /pub/rocky/9/BaseOS/x86_64/os/repodata/
-          - /pub/rocky/9/AppStream/x86_64/os/repodata/
-          - /pub/rocky/9/extras/x86_64/os/repodata/
+          - "/pub/rocky/*/*/*/os/repodata/**"
 
 ---
 spring:
@@ -69,5 +65,5 @@ spring:
 application:
   storage:
     type: s3
-    path: dependency-proxy/
     bucket: test-bucket
+    prefix: dependency-proxy

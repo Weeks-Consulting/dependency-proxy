@@ -7,27 +7,13 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>4.0.6</version>
-        <relativePath /> <!-- lookup parent from repository -->
+        <relativePath />
     </parent>
     <groupId>us.weeksconsulting</groupId>
     <artifactId>dependency-proxy</artifactId>
-    <version>0.0.1</version>
-    <name />
-    <description />
-    <url />
-    <licenses>
-        <license />
-    </licenses>
-    <developers>
-        <developer />
-    </developers>
-    <scm>
-        <connection />
-        <developerConnection />
-        <tag />
-        <url />
-    </scm>
+    <version>0.1.0</version>
     <properties>
+        <sonar.organization>weeks-consulting</sonar.organization>
         <java.version>25</java.version>
         <proxy.image.name>ghcr.io/weeks-consulting/${project.artifactId}:${project.version}</proxy.image.name>
     </properties>
@@ -48,22 +34,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-tomcat</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-jetty</artifactId>
         </dependency>
         <dependency>
             <groupId>io.awspring.cloud</groupId>
             <artifactId>spring-cloud-aws-starter-s3</artifactId>
         </dependency>
-        
+
+        <!-- Database Dependencies -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
@@ -72,15 +49,19 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
+
+        <!-- Apache Commons -->
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <version>1.21.0</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.21.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
         </dependency>
 
 
@@ -137,6 +118,11 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.22.0</version>
+            </dependency>
+            <dependency>
                 <groupId>io.awspring.cloud</groupId>
                 <artifactId>spring-cloud-aws-dependencies</artifactId>
                 <version>4.0.0</version>
@@ -162,10 +148,13 @@
                         <tags>${proxy.image.tag}</tags>
                         <env>
                             <BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
+                            <BP_EMBED_CERTS>true</BP_EMBED_CERTS>
+                            <BP_RUNTIME_CERT_BINDING_DISABLED>true</BP_RUNTIME_CERT_BINDING_DISABLED>
                         </env>
                         <bindings>
                             <binding>/certs:/certs</binding>
                         </bindings>
+                        <builder>paketobuildpacks/ubuntu-noble-builder:latest</builder>
                     </image>
                 </configuration>
             </plugin>
@@ -174,7 +163,8 @@
                 <artifactId>native-maven-plugin</artifactId>
                 <configuration>
                     <buildArgs>
-                        <arg>--enable-url-protocols=https</arg>
+                        <buildArg>--enable-url-protocols=https</buildArg>
+                        <buildArg>-H:Log=registerClass</buildArg>
                     </buildArgs>
                 </configuration>
             </plugin>

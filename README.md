@@ -21,7 +21,6 @@ docker compose down --volumes --remove-orphans
 * Implement improved cache exclusions
     * Add a ttl for cache exclusions so they still can benefit from caching but for a much shorter duration
     * Add regular expression based exclusions - needed for NPM
-* Implement regular expression based cache exclusions - Needed for NPM
 * Implement file integrity checks
     * Verify files the database thinks are cached actually are
     * Verify files exist before attempting to download
@@ -39,6 +38,9 @@ docker compose down --volumes --remove-orphans
 
 # Run Test Instance using s3 storage
 ./mvnw clean spring-boot:test-run -Dspring-boot.run.profiles=test,s3
+
+# Access Postgres Test Instance
+docker exec -it $(docker ps | grep postgres | awk '{print $1}') psql -U test
 ```
 
 ### Local Test Commands
@@ -60,6 +62,9 @@ time curl -v 'http://localhost:8080/proxy/raw/apache/unknown_file.zip'
 
 # NPM Package with Complicated URL - 4645a1bd80161e333bf6442f11916a14
 time curl -v 'http://localhost:8080/proxy/raw/npm/@isaacs%2ffs-minipass' | md5sum
+
+# Debian Package
+time curl -v 'http://localhost:8080/proxy/raw/debian/debian/dists/trixie/InRelease' | md5sum
 
 # Test something from the NPM Registry - Using `--no-audit` as the proxy doesn't support post requests
 npm config set registry=http://localhost:8080/proxy/raw/npm
