@@ -2,6 +2,9 @@ spring:
   application:
     name: dependency-proxy
 
+  aop:
+    proxy-target-class: false
+
   cloud:
     aws:
       s3:
@@ -20,9 +23,9 @@ spring:
     configuration:
       maximum-pool-size: ${PROXY_DB_POOL_SIZE:20}
 
-  mvc:
-    async:
-      request-timeout: ${PROXY_ASYNC_REQUEST_TIMEOUT:300000}
+  # mvc:
+  #   async:
+  #     request-timeout: ${PROXY_ASYNC_REQUEST_TIMEOUT:300000}
 
 server:
   # Don't return error messages to client
@@ -45,5 +48,7 @@ application:
     type: ${PROXY_STORAGE_TYPE:local}
     path: ${PROXY_STORAGE_PATH:/data}
     bucket: ${PROXY_S3_BUCKET}
+    prefix: ${PROXY_S3_PREFIX}
   cleanup:
-    schedule: ${PROXY_CLEANUP_JOB_SCHEDULE:30m}
+    schedule: ${PROXY_CLEANUP_JOB_SCHEDULE:5m}
+    lock_timeout: ${PROXY_CACHE_LOCK_TIMEOUT:5m}

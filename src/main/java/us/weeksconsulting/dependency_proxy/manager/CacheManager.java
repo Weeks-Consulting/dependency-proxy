@@ -2,13 +2,10 @@ package us.weeksconsulting.dependency_proxy.manager;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.commons.io.input.TeeInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -25,26 +22,26 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import us.weeksconsulting.dependency_proxy.config.ApplicationConfig;
 import us.weeksconsulting.dependency_proxy.config.model.Repository;
-import us.weeksconsulting.dependency_proxy.dao.RepositoryCacheEntryDao;
+import us.weeksconsulting.dependency_proxy.dao.RepositoryCacheDao;
 import us.weeksconsulting.dependency_proxy.exception.UnknownRepositoryException;
-import us.weeksconsulting.dependency_proxy.model.RepositoryCacheEntry;
-import us.weeksconsulting.dependency_proxy.service.FileService;
+import us.weeksconsulting.dependency_proxy.record.RepositoryCacheRecord;
+import us.weeksconsulting.dependency_proxy.service.CacheService;
 
 @Component
 public class CacheManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(CacheManager.class);
 
   private final Map<String, Repository> rawRepositories;
-  private final RepositoryCacheEntryDao repoDao;
-  private final FileService fileService;
+  private final RepositoryCacheDao repoDao;
+  private final CacheService cacheService;
 
   public CacheManager(
       ApplicationConfig appConfig,
-      RepositoryCacheEntryDao repoDao,
-      FileService fileService) {
-    this.rawRepositories = appConfig.getRepositories().getRawRepositories();
+      RepositoryCacheDao repoDao,
+      CacheService cacheService) {
+    this.rawRepositories = appConfig.repositories().get("raw");
     this.repoDao = repoDao;
-    this.fileService = fileService;
+    this.cacheService = cacheService;
   }
 
   @Transactional
@@ -55,114 +52,86 @@ public class CacheManager {
       throws IOException {
 
     Repository repo = rawRepositories.get(repositoryName);
+    LOGGER.trace("repo: {}", repo);
 
     if (repo == null) {
       throw new UnknownRepositoryException(repositoryName);
     }
 
-    LOGGER.trace("repo: {}", repo);
-
-    // Acquires a shared lock on cache entry.
-    RepositoryCacheEntry repositoryCacheEntry = repoDao.insertGetCacheEntry(
-        repositoryType,
-        repositoryName,
-        urlPath);
-
-    LOGGER.trace("repositoryCacheEntry: {}", repositoryCacheEntry);
+    // Add or fetch existing RepositoryCacheRecord
+    // This establishes a shared read lock on the record and prevents deletion
+    RepositoryCacheRecord repositoryCacheRecord = repoDao.insertGetCacheEntry(repositoryType, repositoryName, urlPath);
+    LOGGER.trace("RepositoryCacheRecord: {}", repositoryCacheRecord);
 
     // Since we are proxying the request we do not encode the incoming URL
-    URI url = UriComponentsBuilder.fromUriString(repo.getBaseUrl() + urlPath).build(true).toUri();
+    URI url = UriComponentsBuilder.fromUriString(repo.baseUrl() + urlPath).build(true).toUri();
     LOGGER.trace("url: {}", url);
 
-    if (isExcluded(urlPath, repo)) {
+    if (repo.isExcluded(urlPath)) {
       LOGGER.info("Bypassing Cache for Excluded URL - {}", url);
       return getBypassCache(url);
     } else {
-      return getFromCache(url, repositoryCacheEntry);
+      return getThroughCache(url, repositoryCacheRecord);
     }
 
   }
 
-  private ResponseEntity<StreamingResponseBody> getFromCache(
+  private ResponseEntity<StreamingResponseBody> getThroughCache(
       URI url,
-      RepositoryCacheEntry repositoryCacheEntry)
-      throws IOException {
-    boolean isCached = repositoryCacheEntry.isCached();
-    InputStream inputStream;
+      RepositoryCacheRecord repositoryCacheRecord) throws IOException {
+    UUID cacheObjectId = repositoryCacheRecord.cacheObjectId();
+    String cacheObjectPath = repositoryCacheRecord.cacheObjectPath();
+    boolean cached = repositoryCacheRecord.cached();
     HttpHeaders headers = new HttpHeaders();
-    HttpStatusCode statusCode;
 
-    if (isCached) {
+    if (cached) {
       LOGGER.debug("Cache Entry Found - {}", url);
-      inputStream = streamFromCache(repositoryCacheEntry);
-      headers.setContentType(repositoryCacheEntry.getMimeType());
-      statusCode = HttpStatus.OK;
+      UUID lockId = UUID.randomUUID();
+      repoDao.lockCacheEntryForRead(repositoryCacheRecord.cacheObjectId(), lockId);
+      headers.setContentType(repositoryCacheRecord.cacheObjectMimeTypeAsMediaType());
+      LOGGER.trace("Returning ResponseEntity From Cache");
+      return ResponseEntity.ok()
+          .headers(headers)
+          .body(outputStream -> cacheService.readFromCache(cacheObjectId, cacheObjectPath, lockId, outputStream));
     } else {
       LOGGER.debug("Cache Entry Not Found - {}", url);
       ClientHttpResponse response = getFromUrl(url);
-      statusCode = response.getStatusCode();
-      MediaType contentType = response.getHeaders().getContentType();
-      headers.setContentType(contentType);
+      HttpStatusCode statusCode = response.getStatusCode();
+      MediaType cacheObjectMimeType = response.getHeaders().getContentType();
+      headers.setContentType(cacheObjectMimeType);
       InputStream responseBody = response.getBody();
       if (statusCode.isSameCodeAs(HttpStatus.OK)) {
-        inputStream = streamThroughCache(responseBody, repositoryCacheEntry, contentType);
+        LOGGER.trace("Returning ResponseEntity Through Cache");
+        return ResponseEntity.ok()
+            .headers(headers)
+            .body(outputStream -> cacheService.readThroughCache(cacheObjectId, cacheObjectPath, cacheObjectMimeType,
+                responseBody, outputStream));
       } else {
         LOGGER.warn("Skip Caching for HTTP Status Code {} - {}", statusCode.value(), url);
-        inputStream = responseBody;
+        return ResponseEntity.status(statusCode)
+            .headers(headers)
+            .body(responseBody::transferTo);
       }
-
     }
-
-    return ResponseEntity.status(statusCode)
-        .headers(headers)
-        .body(outputStream -> inputStream.transferTo(outputStream));
-
   }
 
-  private ResponseEntity<StreamingResponseBody> getBypassCache(URI url)
-      throws IOException {
+  private ResponseEntity<StreamingResponseBody> getBypassCache(URI url) throws IOException {
 
     ClientHttpResponse response = getFromUrl(url);
-    HttpStatusCode statusCode = response.getStatusCode();
-    MediaType contentType = response.getHeaders().getContentType();
     HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(contentType);
-    InputStream inputStream = response.getBody();
+    HttpStatusCode statusCode = response.getStatusCode();
+    MediaType cacheObjectMimeType = response.getHeaders().getContentType();
+    headers.setContentType(cacheObjectMimeType);
+    InputStream responseBody = response.getBody();
 
+    LOGGER.trace("Returning ResponseEntity Bypassing Cache");
     return ResponseEntity.status(statusCode)
         .headers(headers)
-        .body(outputStream -> inputStream.transferTo(outputStream));
+        .body(responseBody::transferTo);
   }
 
   private ClientHttpResponse getFromUrl(URI url) {
     LOGGER.trace("getFromUrl -> url: {}", url);
     return RestClient.create().get().uri(url).exchange((request, response) -> response, false);
-
-  }
-
-  private InputStream streamThroughCache(
-      InputStream inputStream,
-      RepositoryCacheEntry repositoryCacheEntry,
-      MediaType mimeType)
-      throws IOException {
-    String cacheObjectPath = repositoryCacheEntry.getCacheObjectPath();
-    UUID cacheObjectId = repositoryCacheEntry.getCacheObjectId();
-
-    PipedInputStream pipedInputStream = new PipedInputStream(1048576);
-    PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
-    TeeInputStream teeInputStream = new TeeInputStream(inputStream, pipedOutputStream);
-    fileService.writeFileAsync(teeInputStream, pipedOutputStream, cacheObjectPath, cacheObjectId, mimeType);
-    LOGGER.trace("Returning cacheFile from pipedInputStream");
-    return pipedInputStream;
-  }
-
-  private InputStream streamFromCache(RepositoryCacheEntry repositoryCacheEntry) throws IOException {
-    String cacheObjectPath = repositoryCacheEntry.getCacheObjectPath();
-    UUID cacheObjectId = repositoryCacheEntry.getCacheObjectId();
-    return fileService.readFileFromCache(cacheObjectPath, cacheObjectId);
-  }
-
-  private boolean isExcluded(String urlPath, Repository repository) {
-    return repository.getExcludes().stream().anyMatch(excludePath -> urlPath.startsWith(excludePath));
   }
 }

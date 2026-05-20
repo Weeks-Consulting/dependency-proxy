@@ -45,17 +45,14 @@ services:
                   "base_url": "http://deb.debian.org",
                   "cache_ttl": "10m",
                   "excludes": [
-                    "/debian/dists/",
-                    "/debian-security/dists/"
+                    "/*/dists/**"
                   ]
                 },
                 "rocky": {
                   "base_url": "http://dl.rockylinux.org",
                   "cache_ttl": "10m",
                   "excludes": [
-                    "/pub/rocky/9/BaseOS/x86_64/os/repodata/",
-                    "/pub/rocky/9/AppStream/x86_64/os/repodata/",
-                    "/pub/rocky/9/extras/x86_64/os/repodata/"
+                    "/pub/rocky/*/*/*/os/repodata/**"
                   ]
                 }
               }
